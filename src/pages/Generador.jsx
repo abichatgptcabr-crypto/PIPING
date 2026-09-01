@@ -213,6 +213,131 @@ const AP0X = {
   ],
 };
 
+const BRANCH_B10A = {
+  legend: ["S.W. Equal Tee", "S.W. Reducing Tee", "Beveled End Equal Tee",
+    "Beveled End Reducing Tee (* rama menor biselada)", "Weldolet", "Sockolet"],
+  sizes: ['½"', '¾"', '1"', '1½"', '2"', '3"', '4"', '6"', '8"', '10"', '12"', '14"', '16"', '18"', '20"', '24"'],
+  m: {
+    '½"': { '½"': 1, '¾"': 2, '1"': 2, '1½"': 2, '2"': 6, '3"': 6, '4"': 6, '6"': 6, '8"': 6, '10"': 6, '12"': 6, '14"': 6, '16"': 6, '18"': 6, '20"': 6, '24"': 6 },
+    '¾"': { '¾"': 1, '1"': 2, '1½"': 2, '2"': 6, '3"': 6, '4"': 6, '6"': 6, '8"': 6, '10"': 6, '12"': 6, '14"': 6, '16"': 6, '18"': 6, '20"': 6, '24"': 6 },
+    '1"': { '1"': 1, '1½"': 2, '2"': 6, '3"': 6, '4"': 6, '6"': 6, '8"': 6, '10"': 6, '12"': 6, '14"': 6, '16"': 6, '18"': 6, '20"': 6, '24"': 6 },
+    '1½"': { '1½"': 1, '2"': 6, '3"': 6, '4"': 6, '6"': 6, '8"': 6, '10"': 6, '12"': 6, '14"': 6, '16"': 6, '18"': 6, '20"': 6, '24"': 6 },
+    '2"': { '2"': 3, '3"': 4, '4"': 4, '6"': 5, '8"': 5, '10"': 5, '12"': 5, '14"': 5, '16"': 5, '18"': 5, '20"': 5, '24"': 5 },
+    '3"': { '3"': 3, '4"': 4, '6"': 4, '8"': 5, '10"': 5, '12"': 5, '14"': 5, '16"': 5, '18"': 5, '20"': 5, '24"': 5 },
+    '4"': { '4"': 3, '6"': 4, '8"': 4, '10"': 5, '12"': 5, '14"': 5, '16"': 5, '18"': 5, '20"': 5, '24"': 5 },
+    '6"': { '6"': 3, '8"': 4, '10"': 4, '12"': 4, '14"': 5, '16"': 5, '18"': 5, '20"': 5, '24"': 5 },
+    '8"': { '8"': 3, '10"': 4, '12"': 4, '14"': 4, '16"': 4, '18"': 4, '20"': 4, '24"': 5 },
+    '10"': { '10"': 3, '12"': 4, '14"': 4, '16"': 4, '18"': 4, '20"': 4, '24"': 4 },
+    '12"': { '12"': 3, '14"': 4, '16"': 4, '18"': 4, '20"': 4, '24"': 4 },
+    '14"': { '14"': 3, '16"': 4, '18"': 4, '20"': 4, '24"': 4 },
+    '16"': { '16"': 3, '18"': 4, '20"': 4, '24"': 4 },
+    '18"': { '18"': 3, '20"': 4, '24"': 4 },
+    '20"': { '20"': 3, '24"': 4 },
+    '24"': { '24"': 3 },
+  },
+  note: "Matriz completa ½\"–24\" según ACAL-000-ET-C-001, pág. 49.",
+};
+const B10A = {
+  designT: ["-29 a 38", "50", "100", "150", "200"], designP: ["52,1", "51,1", "47,5", "46", "44,7"],
+  comps: [
+    c("Seamless Pipe", "API 5L Gr. B", "160", "", "ASME B36.10M", "PE", '½"–¾"', "(1)(2)"),
+    c("", "", "80", "", "", "PE", '1"–1½"', "(1)(2)"),
+    c("", "", "80", "", "", "BE", '2"', "(1)(2)"),
+    c("", "", "40", "", "", "BE", '2½"–12"', "(1)(2)"),
+    c("SAWL Pipe (100% RX)", "API 5L Gr. B", "40", "", "ASME B36.10M", "BE", '14"–24"', "(1)(2)(3)"),
+    c("Seamless Pipe (Nipple)", "ASTM A-106 Gr.B", "XXS", "", "ASME B36.10M", "NPT", '½"–1½"', "(14)"),
+    c("Forged Fittings", "ASTM A-105", "", "6000#", "ASME B16.11", "SW", '½"–¾"', ""),
+    c("", "", "", "3000#", "", "SW", '1"–1½"', ""),
+    c("", "", "", "6000#", "", "NPT", '½"–1½"', "(14)"),
+    c("Wrought Pipe Fittings", "ASTM A-234 Gr. WPB", "", "", "ASME B16.9", "BW", '2"–24"', "(6)"),
+    c("Flange", "ASTM A-105", "", "300#", "ASME B16.5", "SW/RF", '½"–1½"', "(6)(7)"),
+    c("", "", "", "300#", "", "WN/RF", '2"–24"', "(6)(7)"),
+    c("Blind Flange", "ASTM A-105", "", "300#", "ASME B16.5", "BLIND RF", '½"–24"', "(7)"),
+    c("Orifice Flange", "ASTM A-105", "", "300#", "ASME B16.36", "WN/RF", '2"–24"', "(6)(7)"),
+    c("Gaskets", "304 SS Flexible Graphite filler, 4,5mm Nom Thk., 3,2mm Compressed Thk. / CS Zinc outer ring 304 SS inner ring", "", "300#", "ASME B16.20", "—", '½"–24"', "(11)"),
+    c("Stud Bolts", "ASTM A-193 Gr.B7-ZINC", "", "", "ASME B18.2.1", "—", "—", "(12)(21)"),
+    c("Nuts", "ASTM A-194 Gr.2H-ZINC", "", "", "ASME B18.2.2", "—", "—", ""),
+    c("Spectacle Blind", "ASTM A-516 Gr. 70", "", "300#", "ASME B16.48", "RF", '1"–12"', "(8)(19)(20)"),
+    c("Paddle & Spacer Blind", "ASTM A-516 Gr. 70", "", "300#", "", "RF", '14"–24"', ""),
+    c("Drip Ring", "ASTM A-516 Gr. 70", "", "300#", "", "RF", '1"–12"', ""),
+    c("Dielectric Joint", "Ver Nota 10", "", "300#", "ASME B16.21", "RF", '½"–24"', "(10)"),
+    c("Olet Fittings", "ASTM A-105", "", "6000#", "MSS SP-97", "SW-NPT", '½"–¾"', "(14)"),
+    c("", "", "", "3000#", "", "SW-NPT", '1"–1½"', "(14)"),
+    c("", "", "", "3000#", "", "BW", '2"–24"', ""),
+    c("Swage Nipple", "ASTM A-234 Gr. WPB", "", "", "MSS SP-95", "BW-PE", '½"–4"', "(6)"),
+  ],
+  valves: [
+    v("Ball", "FCJ8SW7", "Full", "—", "2000WOG", "NPT-F x PE", '½"–1½"', "(1)(2)(3)(5)"),
+    v("Ball", "FCJ8SW8", "Full", "—", "800#", "PE", '½"–1½"', "(1)(2)(3)(4)"),
+    v("Ball", "VBA03C030", "Full", "—", "300#", "RF", '2"–4"', "(1)(2)(3)"),
+    v("Ball", "VBA03C031", "Full", "—", "300#", "RF", '6"–24"', "(1)(2)(3)"),
+    v("Globe", "", "—", "—", "300#", "RF", '2"–24"', "(1)(2)(3)"),
+    v("Check", "", "—", "Swing", "300#", "RF", '2"–12"', "(1)(2)(3)"),
+  ],
+  branch: BRANCH_B10A,
+  notes: [
+    "Extremos biselados según ASME B16.25.",
+    "Cañería enterrada: coating externo epoxi fusionado, mín. 16 mils, temperatura de servicio limitada a 65°C según GRAL-100-ET-X-002.",
+    "Costura recta con 100% de radiografía.",
+    "Eliminada.",
+    "Eliminada.",
+    "El bore debe coincidir con el schedule de la cañería.",
+    "Bridas y extremos bridados: cara serrada spiral 125–250 AARH máx.",
+    "Tap hole: ½\" diám. tipo NPT hasta 2\" diám. de cañería, ¾\" para diámetros mayores a 2\".",
+    "Eliminada.",
+    "Junta dieléctrica: sólo tipo Pikotek VCS o monolítica. No se permite tipo Micarta. Incluye manguito aislante, doble aislación y arandelas de acero para tipo Pikotek.",
+    "Gaskets, sellos, asientos y empaquetaduras: libres de materiales con asbesto.",
+    "Espárragos roscados en toda su longitud, con dos tuercas hexagonales semiterminadas pesadas.",
+    "Válvulas de bola socket weld deben quedar en posición abierta al soldarse a la cañería, para no dañar el asiento.",
+    "Fittings roscados sobre process piping: sólo para termopozos y venteos de prueba hidráulica.",
+    "Eliminada.",
+    "Eliminada.",
+    "Ver Nota General 1 (MDMT / espesor de pared, cañería y fittings de acero al carbono).",
+    "Ver Nota General 7 (bridas orificio mayores a 6\": jack screw).",
+    "Espesor mínimo de drip ring: 38,1 mm.",
+    "Oreja de izaje (lifting eye) requerida en tamaños 12\" y mayores.",
+    "Ver Nota General 2 (roscas de espárragos y tuercas: UNC hasta 1\", 8UN por encima de 1\").",
+  ],
+};
+
+const LACAL_FAMILIES_MAP = {
+  A1: "gas", A5: "custom", A10: "gas", A10R: "wepoxy", A10RA: "wepoxy", A11: "venteo",
+  A13: "fire", A14: "fire", A15: "gas", B1: "hc", B3: "wss", B5: "hc", B10A: "hc",
+  B10R: "wepoxy", B10RA: "wepoxy", C1: "gas", C3: "wss", C10: "hc", C10A: "hc",
+  C10R: "wserv", C10RA: "wepoxy", D1: "gas", D10: "hc", D10R: "wepoxy", E3: "wss",
+  PRFV1: "wnm", Y2: "fire",
+};
+const LACAL_CLASSES = [
+  { code: "A1", page: 6, mat: "C.S.", corr: "3,2mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C / 14,1 kg/cm² @ 200°C", services: ["Unidad Tratamiento Agua", "Líneas de Condensado", "Sistema Gas Combustible", "Drenajes", "Sist. de Venteos", "Agua de Servicio"] },
+  { code: "A5", page: 10, mat: "C.S. / Galv.", corr: "3,2mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C / 16,1 kg/cm² @ 150°C", services: ["Clase fuera de servicio — reemplazada por A13, A14 y A15"] },
+  { code: "A10", page: 13, mat: "C.S.", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C / 14,1 kg/cm² @ 200°C", services: ["Glycol", "Nitrógeno"] },
+  { code: "A10R", page: 16, mat: "C.S. w/ int. epoxy coating", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -20 a 38°C / 18,71 kg/cm² @ 65°C", services: ["Descarga de agua de inyección a pozos"] },
+  { code: "A10RA", page: 20, mat: "C.S. w/ int. epoxy coating", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -20 a 38°C / 18,71 kg/cm² @ 65°C", services: ["Agua de Inyección — Presencia de Arena"] },
+  { code: "A11", page: 24, mat: "Low Temp. C.S.", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -40 a 38°C / 14,1 kg/cm² @ 200°C", services: ["Sistema de Venteos Fríos"] },
+  { code: "A13", page: 27, mat: "C.S. / Galv.", corr: "3,2 / 0,0mm", rating: "150#", design: "19,6 kg/cm² @ 0 a 38°C / 50°C", services: ["Agua sistema contra incendios (Above Ground, wet service)"] },
+  { code: "A14", page: 30, mat: "C.S. Hot Dip Galv.", corr: "0,0mm", rating: "150#", design: "14 kg/cm² @ -29 a 38°C", services: ["Agua sistema contra incendios (tubería seca)"] },
+  { code: "A15", page: 33, mat: "C.S. Hot Dip Galv.", corr: "0,0mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C / 16,1 kg/cm² @ 150°C", services: ["Aire de instrumentos"] },
+  { code: "B1", page: 36, mat: "C.S.", corr: "1,6mm", rating: "300#", design: "52,1 kg/cm² @ -29 a 38°C / 44,7 kg/cm² @ 200°C", services: ["Hidrocarburos"] },
+  { code: "B3", page: 40, mat: "S.S.", corr: "0,0mm", rating: "300#", design: "42,2 kg/cm² @ -29 a 38°C / 39,2 kg/cm² @ 65°C", services: ["Agua de Inyección", "Agua de producción", "Condensado", "(cloruros hasta 120.000 ppm @ 80°C)"] },
+  { code: "B5", page: 43, mat: "C.S.", corr: "1,6mm", rating: "300#", design: "52,1 kg/cm² @ -29 a 38°C / 37,1 kg/cm² @ 375°C", services: ["Hot Oil"] },
+  { code: "B10A", fam: "hc", detail: B10A, page: 47, mat: "C.S.", corr: "3,2mm", rating: "300#", design: "52,1 kg/cm² @ -29 a 38°C / 44,7 kg/cm² @ 200°C", services: ["Gas sin Tratamiento", "Condensado MP", "Presencia de Arena"] },
+  { code: "B10R", page: 51, mat: "C.S. w/ int. epoxy coating", corr: "1,6mm", rating: "300#", design: "52,1 kg/cm² @ -20 a 38°C / 50,02 kg/cm² @ 65°C", services: ["Descarga de Bombas de Agua Sandjet"] },
+  { code: "B10RA", page: 55, mat: "C.S. w/ int. epoxy coating", corr: "1,6mm", rating: "300#", design: "49,60 kg/cm² @ -20 a 38°C / 46,33 kg/cm² @ 65°C", services: ["Descarga de Bombas de Agua Sandjet — Presencia de Arena"] },
+  { code: "C1", page: 58, mat: "C.S.", corr: "1,6mm", rating: "600#", design: "104,1 kg/cm² @ -29 a 38°C / 89,32 kg/cm² @ 200°C", services: ["Gas Deshidratado"] },
+  { code: "C3", page: 61, mat: "S.S.", corr: "0,0mm", rating: "600#", design: "84,3 kg/cm² @ -29 a 38°C / 78,4 kg/cm² @ 65°C", services: ["Agua de Inyección", "Agua de producción", "Condensado", "(cloruros hasta 120.000 ppm @ 80°C)"] },
+  { code: "C10", page: 64, mat: "C.S.", corr: "3,2mm", rating: "600#", design: "104,1 kg/cm² @ -29 a 38°C / 89,32 kg/cm² @ 200°C", services: ["Gas sin Tratamiento", "Condensado HP"] },
+  { code: "C10A", page: 67, mat: "C.S.", corr: "3,2mm", rating: "600#", design: "104,1 kg/cm² @ -29 a 38°C / 89,32 kg/cm² @ 200°C", services: ["Gas sin Tratamiento", "Condensado HP", "Presencia de Arena"] },
+  { code: "C10R", page: 70, mat: "C.S.", corr: "1,6mm", rating: "600#", design: "99,30 kg/cm² @ -29 a 38°C / 92,66 kg/cm² @ 65°C", services: ["Agua de Producción", "Condensado"] },
+  { code: "C10RA", page: 73, mat: "C.S. w/ int. epoxy coating", corr: "1,6mm", rating: "600#", design: "104,1 kg/cm² @ -29 a 38°C / 102,2 kg/cm² @ 65°C", services: ["Agua de Producción", "Condensado", "Presencia de Arena"] },
+  { code: "D1", page: 76, mat: "C.S.", corr: "1,6mm", rating: "900#", design: "150 kg/cm² @ -29 a 65°C / 134 kg/cm² @ 200°C", services: ["Gas Deshidratado"] },
+  { code: "D10", page: 79, mat: "C.S.", corr: "3,2mm", rating: "900#", design: "156,2 kg/cm² @ -29 a 38°C / 134 kg/cm² @ 200°C", services: ["Gas sin Tratamiento"] },
+  { code: "D10R", page: 83, mat: "C.S. w/ int. epoxy coating", corr: "1,6mm", rating: "900#", design: "156,2 kg/cm² @ -20 a 38°C / 145,8 kg/cm² @ 65°C", services: ["Agua de Producción"] },
+  { code: "E3", page: 87, mat: "S.S.", corr: "0,0mm", rating: "1500#", design: "156,2 kg/cm² @ -20 a 38°C / 145,8 kg/cm² @ 65°C", services: ["Agua de Inyección", "Agua de producción", "Condensado", "(cloruros hasta 120.000 ppm @ 80°C)"] },
+  { code: "PRFV1", page: 90, mat: "PRFV", corr: "N/A", rating: "150#", design: "10,5 kg/cm² @ 0 a 80°C", services: ["Agua de Producción"] },
+  { code: "Y2", page: 94, mat: "HDPE", corr: "N/A", rating: "150#", design: "16,31 kg/cm² @ 21°C", services: ["Agua Sistema Contra Incendios (Underground Service)"] },
+].map((k) => ({ ...k, fam: k.fam || LACAL_FAMILIES_MAP[k.code] || "custom" }));
+
+
 const CLASSES = [
   { code: "AC1", fam: "gas", detail: AC1, page: 7, mat: "C.S.", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C", services: ["Fuel Gas", "Service Air", "Starting Air", "Nitrogen", "Glycol", "Flare", "Atm. Vents", "Gas Lift", "Hydrocarbons liquid & Gas"] },
   { code: "AC3", fam: "wserv", page: 11, mat: "C.S.", corr: "3,2mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C", services: ["Service Water", "Open Drain", "Close Drain", "Hydrocarbons liquid & Gas"] },
@@ -240,17 +365,22 @@ const CLASSES = [
 ];
 
 const seedClasses = () => CLASSES.map((k) => ({ ...k, on: true }));
+const seedLaCalera = () => LACAL_CLASSES.map((k) => ({ ...k, on: true }));
 const SEED_PLANTS = [
   { id: "epf-og", name: "EPF · Oil & Gas Upstream (PCN)",
     kind: "Central de producción temprana — crudo y gas no convencional",
     ref: "018-ABDC-00300-TI-C-0001 · Rev.1", code: "ASME B31.3", seeded: true,
-    naming: NAMING, classes: seedClasses() },
+    codeConvention: "abcd", naming: NAMING, classes: seedClasses() },
+  { id: "lacal-pluspetrol", name: "Yacimiento La Calera · Pluspetrol",
+    kind: "Facilities Engineering & Construction — desarrollo de yacimiento",
+    ref: "ACAL-000-ET-C-001 · Rev. D/E/F/0", code: "ASME B31.3", seeded: true,
+    codeConvention: "freeform", naming: null, classes: seedLaCalera() },
   { id: "hdt-ref", name: "Refinería · Unidad HDT",
     kind: "Hidrotratamiento — plantilla base a completar",
-    ref: "—", code: "ASME B31.3", seeded: false, naming: NAMING, classes: [] },
+    ref: "—", code: "ASME B31.3", seeded: false, codeConvention: "abcd", naming: NAMING, classes: [] },
   { id: "litio", name: "Planta de Litio · Concentradora",
     kind: "Minería / salmuera — plantilla base a completar",
-    ref: "—", code: "ASME B31.3", seeded: false, naming: NAMING, classes: [] },
+    ref: "—", code: "ASME B31.3", seeded: false, codeConvention: "abcd", naming: NAMING, classes: [] },
 ];
 
 const ratingLevel = (r) =>
@@ -759,7 +889,9 @@ export default function Generador() {
       ...cs,
     ]),
     saveClass: (originalCode, nc) => setActiveClasses((cs) => cs.map((k) => (k.code === originalCode ? { ...nc, on: k.on } : k))),
-    resetStandard: () => setActiveClasses(() => seedClasses()),
+    resetStandard: () => setActiveClasses(() =>
+      activeId === "lacal-pluspetrol" ? seedLaCalera() : seedClasses()
+    ),
     newPlant: (mode) => {
       const np = {
         id: uid(),
@@ -807,7 +939,7 @@ export default function Generador() {
             </h2>
             <div className="flex items-center gap-2">
               <button onClick={handlers.addBlank} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#132A4C] text-white hover:bg-[#1F3F6E]"><Plus size={13} /> Agregar clase</button>
-              {active.seeded && <button onClick={handlers.resetStandard} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]" title="Volver a las 23 clases del documento"><RotateCcw size={13} /> Restaurar estándar</button>}
+              {active.seeded && <button onClick={handlers.resetStandard} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]" title="Volver a las clases del documento original"><RotateCcw size={13} /> Restaurar estándar</button>}
             </div>
           </div>
 
@@ -845,8 +977,17 @@ export default function Generador() {
         </div>
 
         <div className="order-1 lg:order-2 space-y-4">
-          <CodeStamp sel={asm} setSel={setAsm} classes={active.classes} />
-          <Convention />
+          {active.codeConvention === "abcd" ? (
+            <>
+              <CodeStamp sel={asm} setSel={setAsm} classes={active.classes} />
+              <Convention />
+            </>
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 text-[13px] text-slate-600 leading-relaxed">
+              <div className="flex items-center gap-2 text-[13px] font-medium text-slate-800 mb-1.5"><Info size={15} className="text-slate-400" /> Código propio por clase</div>
+              Este proyecto no usa la convención segmentada A-B-C-D: cada clase tiene su propio código de documento (ej. B10A, A10R). El ensamblador de la izquierda no aplica acá — buscá por código directamente en el registro o con la barra de búsqueda.
+            </div>
+          )}
           <div className="text-[11px] text-slate-400 leading-relaxed px-1">
             Los cambios se guardan en este navegador (localStorage). Otro equipo o modo incógnito no los ve — el próximo paso, cuando la lógica esté validada, es un backend compartido.
           </div>
