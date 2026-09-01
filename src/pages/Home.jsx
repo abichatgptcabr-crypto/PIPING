@@ -7,14 +7,14 @@ const TOOLS = [
     status: "activo",
     title: "Generador de piping class",
     desc: "Seleccioná el tipo de planta, el estándar de clases viene pre-cargado y editable. Ensamblá el código A-B-C-D y llegá a componentes, válvulas y ramificaciones.",
-    meta: "ASME B31.3 · 23 clases EPF cargadas",
+    meta: "ASME B31.3 · EPF + La Calera",
   },
   {
-    id: "placeholder-1",
-    status: "próximamente",
-    title: "Registro de MTO / BOM",
-    desc: "Segunda herramienta de la serie: todavía sin definir alcance.",
-    meta: "sin fecha",
+    id: "spec-builder",
+    status: "activo",
+    title: "Armar especificación",
+    desc: "Elegí clases de cualquiera de los proyectos cargados —EPF, La Calera, o combinando ambos— y armá un documento nuevo con el formato de spec, listo para imprimir o guardar como PDF.",
+    meta: "cross-proyecto · exporta a PDF",
   },
 ];
 
