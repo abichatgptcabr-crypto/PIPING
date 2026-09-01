@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta Hytech, muestreada del isologo institucional (HY azul / tech grafito) */
+  --color-hytech-navy: #132A4C;
+  --color-hytech-blue-dark: #1F3F6E;
+  --color-hytech-blue: #2C568E;
+  --color-hytech-blue-mid: #3F72AC;
+  --color-hytech-sky: #7FC4EE;
+  --color-hytech-paper: #F4F7FA;
+
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+}
