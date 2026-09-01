@@ -857,8 +857,13 @@ export default function Generador() {
   useEffect(() => {
     const saved = storageLoad();
     if (saved && Array.isArray(saved) && saved.length) {
-      setPlants(saved);
-      if (!saved.find((p) => p.id === activeId)) setActiveId(saved[0].id);
+      // Adjunto cualquier planta nueva del código (SEED_PLANTS) que el usuario
+      // todavía no tenga guardada, sin tocar lo que ya editó.
+      const savedIds = new Set(saved.map((p) => p.id));
+      const missing = SEED_PLANTS.filter((p) => !savedIds.has(p.id)).map((p) => clone(p));
+      const merged = missing.length ? [...saved, ...missing] : saved;
+      setPlants(merged);
+      if (!merged.find((p) => p.id === activeId)) setActiveId(merged[0].id);
     }
     setReady(true);
   }, []);
