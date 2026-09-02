@@ -272,6 +272,19 @@ export default function SpecBuilder() {
 
   const selectedIds = useMemo(() => new Set(selected.map((s) => s.item.id)), [selected]);
 
+  const groupedSpecs = useMemo(() => {
+    if (!savedSpecs) return [];
+    const map = new Map();
+    for (const s of savedSpecs) {
+      const key = (s.doc_number && s.doc_number.trim()) || `${s.title}::${s.project}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(s);
+    }
+    return [...map.entries()]
+      .map(([key, items]) => ({ key, items: items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) }))
+      .sort((a, b) => new Date(b.items[0].created_at) - new Date(a.items[0].created_at));
+  }, [savedSpecs]);
+
   const toggle = (plant, item) => {
     setSelected((sel) =>
       sel.some((s) => s.item.id === item.id)
@@ -396,6 +409,9 @@ export default function SpecBuilder() {
                   <label className="text-[10px] uppercase tracking-wider text-slate-400">{label}</label>
                   <input value={docMeta[key]} onChange={(e) => setDocMeta({ ...docMeta, [key]: e.target.value })}
                     className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
+                  {key === "docNumber" && (
+                    <div className="text-[10.5px] text-slate-400 mt-1 leading-snug">Si este N° de documento ya existe entre las specs guardadas, "Guardar" agrega una revisión nueva — no pisa la anterior.</div>
+                  )}
                 </div>
               ))}
               <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none pt-1">
@@ -449,19 +465,32 @@ export default function SpecBuilder() {
               <span className="text-[14px] font-semibold text-slate-800">Especificaciones guardadas</span>
               <button onClick={() => setShowSaved(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
             </div>
-            <div className="p-3 space-y-1.5">
+            <div className="p-3 space-y-3">
               {savedSpecs === null ? (
                 <div className="text-[13px] text-slate-400 flex items-center gap-2 px-2 py-3"><Loader2 size={14} className="animate-spin" /> Cargando…</div>
               ) : savedSpecs.length === 0 ? (
                 <div className="text-[13px] text-slate-400 px-2 py-3">Todavía no guardaste ninguna especificación.</div>
               ) : (
-                savedSpecs.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-md hover:bg-slate-50">
-                    <button onClick={() => loadSpec(s)} className="text-left min-w-0 flex-1">
-                      <div className="text-[13px] font-medium text-slate-800 truncate">{s.title} — {s.project || "sin proyecto"}</div>
-                      <div className="text-[11px] text-slate-400">{s.client ? `Para ${s.client} · ` : ""}Rev. {s.revision} · {new Date(s.created_at).toLocaleDateString("es-AR")} · {s.created_by}</div>
-                    </button>
-                    <button onClick={() => removeSaved(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>
+                groupedSpecs.map((group) => (
+                  <div key={group.key} className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="px-2.5 py-1.5 bg-slate-50 border-b border-slate-200">
+                      <div className="text-[13px] font-semibold text-slate-800 truncate">{group.items[0].project || "sin proyecto"}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{group.items[0].title}{group.items[0].doc_number ? ` · ${group.items[0].doc_number}` : ""} · {group.items.length} {group.items.length === 1 ? "revisión" : "revisiones"}</div>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {group.items.map((s, i) => (
+                        <div key={s.id} className="flex items-center justify-between gap-2 px-2.5 py-2 hover:bg-slate-50">
+                          <button onClick={() => loadSpec(s)} className="text-left min-w-0 flex-1">
+                            <div className="text-[12.5px] text-slate-700">
+                              <span className="font-mono font-medium">Rev. {s.revision}</span>
+                              {i === 0 && <span className="ml-1.5 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">más reciente</span>}
+                            </div>
+                            <div className="text-[11px] text-slate-400">{s.client ? `Para ${s.client} · ` : ""}{new Date(s.created_at).toLocaleDateString("es-AR")} · {s.created_by}</div>
+                          </button>
+                          <button onClick={() => removeSaved(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))
               )}
