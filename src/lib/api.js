@@ -321,6 +321,20 @@ export async function fetchSpecItems(specId) {
   return data.map((row) => row.classes);
 }
 
+// Trazabilidad: en qué specs guardadas se usó esta clase (para el tab
+// "Specs" del panel de detalle).
+export async function fetchSpecsForClass(classId) {
+  const { data, error } = await supabase
+    .from("spec_items")
+    .select("specs(*)")
+    .eq("class_id", classId);
+  if (error) throw error;
+  return data
+    .map((row) => row.specs)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
 export async function deleteSpec(id) {
   const { error } = await supabase.from("specs").delete().eq("id", id);
   if (error) throw error;
