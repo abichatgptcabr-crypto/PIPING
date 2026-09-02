@@ -9,7 +9,7 @@ import {
   seedClasses, seedLaCalera, EPF_CODE_CONVENTION, FREEFORM_CODE_CONVENTION,
 } from "../data/plants";
 import {
-  fetchAllPlants, ensureSeeded, insertClass, updateClassWithRevision, toggleClassIncluded,
+  fetchAllPlants, syncFromSeed, insertClass, updateClassWithRevision, toggleClassIncluded,
   deleteClass, markReviewed, clearReviewed, createPlant, renamePlant as apiRenamePlant,
   deletePlant as apiDeletePlant, fetchRevisions, bulkInsertClasses, resetPlantClasses,
 } from "../lib/api";
@@ -561,7 +561,7 @@ export default function Generador() {
   useEffect(() => {
     (async () => {
       try {
-        await ensureSeeded(SEED_PLANTS);
+        await syncFromSeed(SEED_PLANTS);
         await reload();
       } catch (e) {
         setErr(e.message || "No se pudo conectar con la base de datos.");
