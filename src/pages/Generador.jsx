@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Layers, ChevronDown, ChevronRight, X, Table2, CircleDot, GitBranch, StickyNote,
   Gauge, Search, Info, FileWarning, Plus, Pencil, Copy, Trash2, Building2, RotateCcw,
-  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2,
+  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2, Filter,
 } from "lucide-react";
 import {
   FAMILIES, COMP_COLS, VALVE_COLS, SEED_PLANTS, ratingLevel, clone, uid,
@@ -541,6 +541,46 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) 
   );
 }
 
+function FacetGroup({ label, options, selected, onToggle }) {
+  if (options.length === 0) return null;
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1.5">{label}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => {
+          const active = selected.has(opt);
+          return (
+            <button key={opt} onClick={() => onToggle(opt)}
+              className={`text-[11.5px] px-2 py-1 rounded-md border font-mono transition ${
+                active ? "bg-[#2C568E] border-[#2C568E] text-white" : "bg-white border-slate-200 text-slate-600 hover:border-[#7FC4EE]"
+              }`}>
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TriToggle({ label, value, onChange, options }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1.5">{label}</div>
+      <div className="flex gap-1.5">
+        {options.map(([val, text]) => (
+          <button key={val} onClick={() => onChange(val)}
+            className={`text-[11.5px] px-2 py-1 rounded-md border transition ${
+              value === val ? "bg-[#2C568E] border-[#2C568E] text-white" : "bg-white border-slate-200 text-slate-600 hover:border-[#7FC4EE]"
+            }`}>
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Generador() {
   const { email, signOut } = useAuth();
   const [plants, setPlants] = useState([]);
@@ -551,6 +591,22 @@ export default function Generador() {
   const [asm, setAsm] = useState({});
   const [q, setQ] = useState("");
   const [onlyIncluded, setOnlyIncluded] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [fMat, setFMat] = useState(new Set());
+  const [fRating, setFRating] = useState(new Set());
+  const [fCorr, setFCorr] = useState(new Set());
+  const [fDetail, setFDetail] = useState("all");
+  const [fReviewed, setFReviewed] = useState("all");
+  const toggleInSet = (setter) => (val) => setter((prev) => {
+    const next = new Set(prev);
+    next.has(val) ? next.delete(val) : next.add(val);
+    return next;
+  });
+  const clearFilters = () => {
+    setFMat(new Set()); setFRating(new Set()); setFCorr(new Set());
+    setFDetail("all"); setFReviewed("all");
+  };
+  useEffect(() => { clearFilters(); setQ(""); }, [activeId]);
 
   const reload = async () => {
     const data = await fetchAllPlants();
@@ -666,6 +722,18 @@ export default function Generador() {
     },
   };
 
+  const facetOptions = useMemo(() => {
+    if (!active) return { mats: [], ratings: [], corrs: [] };
+    const mats = new Set(), ratings = new Set(), corrs = new Set();
+    active.classes.forEach((k) => {
+      if (k.mat) mats.add(k.mat);
+      if (k.rating) ratings.add(k.rating);
+      if (k.corr) corrs.add(k.corr);
+    });
+    return { mats: [...mats].sort(), ratings: [...ratings].sort(), corrs: [...corrs].sort() };
+  }, [active]);
+  const activeFilterCount = fMat.size + fRating.size + fCorr.size + (fDetail !== "all" ? 1 : 0) + (fReviewed !== "all" ? 1 : 0);
+
   const fams = useMemo(() => {
     if (!active) return {};
     const g = {};
@@ -673,10 +741,17 @@ export default function Generador() {
       if (onlyIncluded && !k.on) return;
       const hay = (k.code + " " + k.services.join(" ") + " " + k.mat).toLowerCase();
       if (q && !hay.includes(q.toLowerCase())) return;
+      if (fMat.size && !fMat.has(k.mat)) return;
+      if (fRating.size && !fRating.has(k.rating)) return;
+      if (fCorr.size && !fCorr.has(k.corr)) return;
+      if (fDetail === "complete" && !k.detail) return;
+      if (fDetail === "summary" && k.detail) return;
+      if (fReviewed === "reviewed" && !k.reviewedBy) return;
+      if (fReviewed === "unreviewed" && k.reviewedBy) return;
       (g[k.fam] ||= []).push(k);
     });
     return g;
-  }, [active, q, onlyIncluded]);
+  }, [active, q, onlyIncluded, fMat, fRating, fCorr, fDetail, fReviewed]);
   const includedCount = active ? active.classes.filter((k) => k.on).length : 0;
 
   if (!ready)
@@ -716,7 +791,33 @@ export default function Generador() {
               <input type="checkbox" checked={onlyIncluded} onChange={(e) => setOnlyIncluded(e.target.checked)} className="accent-[#2C568E]" />
               Sólo las del proyecto
             </label>
+            <button onClick={() => setFiltersOpen(!filtersOpen)}
+              className={`flex items-center gap-1.5 text-[12px] px-2.5 py-1.5 rounded-md border ${
+                activeFilterCount > 0 ? "border-[#2C568E] text-[#1F3F6E] bg-[#EAF3FB]" : "border-slate-200 text-slate-600 hover:border-[#7FC4EE]"
+              }`}>
+              <Filter size={13} /> Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+              {filtersOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            </button>
           </div>
+
+          {filtersOpen && (
+            <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+              <div className="grid sm:grid-cols-3 gap-4">
+                <FacetGroup label="Material" options={facetOptions.mats} selected={fMat} onToggle={toggleInSet(setFMat)} />
+                <FacetGroup label="Rating" options={facetOptions.ratings} selected={fRating} onToggle={toggleInSet(setFRating)} />
+                <FacetGroup label="Corrosión" options={facetOptions.corrs} selected={fCorr} onToggle={toggleInSet(setFCorr)} />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4 pt-1 border-t border-slate-100">
+                <TriToggle label="Detalle" value={fDetail} onChange={setFDetail}
+                  options={[["all", "Todas"], ["complete", "Completas"], ["summary", "Sólo resumen"]]} />
+                <TriToggle label="Revisión" value={fReviewed} onChange={setFReviewed}
+                  options={[["all", "Todas"], ["reviewed", "Revisadas"], ["unreviewed", "Sin revisar"]]} />
+              </div>
+              {activeFilterCount > 0 && (
+                <button onClick={clearFilters} className="text-[12px] text-slate-500 hover:text-red-500">Limpiar filtros</button>
+              )}
+            </div>
+          )}
 
           {active.classes.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 px-5 py-12 text-center">
