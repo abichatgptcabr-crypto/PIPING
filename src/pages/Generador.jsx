@@ -488,7 +488,7 @@ function RegisterCard({ item, onOpen, onToggle, onDuplicate, onRemove }) {
   );
 }
 
-function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete, userEmail, onSignOut }) {
+function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const active = plants.find((p) => p.id === activeId);
@@ -511,30 +511,24 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete, us
           <button onClick={() => setRenaming(true)} className="p-1.5 text-slate-400 hover:text-slate-700" title="Renombrar"><Pencil size={14} /></button>
         )}
         {plants.length > 1 && <button onClick={() => onDelete(activeId)} className="p-1.5 text-slate-400 hover:text-red-500" title="Eliminar tipo de planta"><Trash2 size={14} /></button>}
-        <div className="relative ml-auto flex items-center gap-3">
-          <div className="relative">
-            <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Plus size={14} /> Nuevo tipo de planta</button>
-            {menu && (
-              <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-[13px]">
-                <button onClick={() => { onNew("dup"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
-                  <div className="font-medium text-slate-800">Duplicar estándar EPF</div>
-                  <div className="text-[11px] text-slate-500">Arranca con las clases de EPF pre-cargadas para editar</div>
-                </button>
-                <button onClick={() => { onNew("blank-abcd"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
-                  <div className="font-medium text-slate-800">En blanco · convención A-B-C-D</div>
-                  <div className="text-[11px] text-slate-500">Registro vacío, código segmentado tipo EPF</div>
-                </button>
-                <button onClick={() => { onNew("blank-freeform"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
-                  <div className="font-medium text-slate-800">En blanco · código propio</div>
-                  <div className="text-[11px] text-slate-500">Registro vacío, cada clase con su propio código (tipo La Calera)</div>
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-[12px] text-slate-500 border-l border-slate-200 pl-3">
-            <span className="truncate max-w-[140px]" title={userEmail}>{userEmail}</span>
-            <button onClick={onSignOut} title="Cerrar sesión" className="text-slate-400 hover:text-red-500"><LogOut size={14} /></button>
-          </div>
+        <div className="relative ml-auto">
+          <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Plus size={14} /> Nuevo tipo de planta</button>
+          {menu && (
+            <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-[13px]">
+              <button onClick={() => { onNew("dup"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                <div className="font-medium text-slate-800">Duplicar estándar EPF</div>
+                <div className="text-[11px] text-slate-500">Arranca con las clases de EPF pre-cargadas para editar</div>
+              </button>
+              <button onClick={() => { onNew("blank-abcd"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                <div className="font-medium text-slate-800">En blanco · convención A-B-C-D</div>
+                <div className="text-[11px] text-slate-500">Registro vacío, código segmentado tipo EPF</div>
+              </button>
+              <button onClick={() => { onNew("blank-freeform"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                <div className="font-medium text-slate-800">En blanco · código propio</div>
+                <div className="text-[11px] text-slate-500">Registro vacío, cada clase con su propio código (tipo La Calera)</div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {active && (
@@ -697,8 +691,7 @@ export default function Generador() {
   return (
     <div className="bg-slate-100 text-slate-900" style={{ fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}>
       <PlantBar plants={plants} activeId={activeId} setActiveId={setActiveId}
-        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant}
-        userEmail={email} onSignOut={signOut} />
+        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6">
         <div className="space-y-5 order-2 lg:order-1">

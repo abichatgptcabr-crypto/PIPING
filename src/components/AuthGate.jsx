@@ -3,10 +3,21 @@ import { Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import hytechLogo from "../assets/hytech-logo.png";
 
-const AuthContext = createContext(null);
+const AuthContext = createContext({
+  email: "equipo@hytech.com",
+  signOut: () => {},
+});
 export const useAuth = () => useContext(AuthContext);
 
+// LOGIN DESACTIVADO TEMPORALMENTE — ver mensaje del chat que armó esto.
+// Para volver a exigirlo: en App.jsx, envolvé <AuthGateReal> en vez de
+// pasar los children directo, y corré de nuevo las policies de
+// schema.sql (las que dicen auth.role() = 'authenticated') en Supabase.
 export default function AuthGate({ children }) {
+  return children;
+}
+
+export function AuthGateReal({ children }) {
   const [session, setSession] = useState(undefined); // undefined = cargando, null = sin sesión
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
