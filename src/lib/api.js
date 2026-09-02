@@ -104,6 +104,57 @@ export async function ensureSeeded(seedPlants) {
   return true;
 }
 
+// Trae la base de datos al día con lo que hay en el código: agrega plantas
+// y clases nuevas que todavía no existan, y completa el "detail" de clases
+// que ya existen pero siguen en "sólo resumen" (detail null) cuando el
+// código ya tiene el detalle cargado. Nunca pisa una clase que el usuario
+// ya editó a mano (si detail ya tiene algo, no se toca). Corre siempre,
+// no sólo la primera vez — así cualquier avance en epf.js/lacal.js llega
+// solo, sin volver a sembrar toda la base.
+export async function syncFromSeed(seedPlants) {
+  const { data: existingPlants, error: pErr } = await supabase.from("plants").select("id");
+  if (pErr) throw pErr;
+  const existingPlantIds = new Set((existingPlants || []).map((p) => p.id));
+
+  const { data: existingClasses, error: cErr } = await supabase
+    .from("classes")
+    .select("id, plant_id, code, detail");
+  if (cErr) throw cErr;
+  const existingByKey = new Map((existingClasses || []).map((k) => [k.plant_id + "::" + k.code, k]));
+
+  let added = 0, filled = 0;
+
+  for (const plant of seedPlants) {
+    if (!existingPlantIds.has(plant.id)) {
+      const { error } = await supabase.from("plants").insert({
+        id: plant.id, name: plant.name, kind: plant.kind, ref: plant.ref,
+        code: plant.code, seeded: plant.seeded, naming_convention: plant.codeConvention,
+      });
+      if (error) throw error;
+    }
+
+    for (const k of plant.classes) {
+      const key = plant.id + "::" + k.code;
+      const existing = existingByKey.get(key);
+
+      if (!existing) {
+        const { error } = await supabase.from("classes").insert({
+          plant_id: plant.id, code: k.code, fam: k.fam, mat: k.mat, corr: k.corr,
+          rating: k.rating, design: k.design, services: k.services, page: k.page ?? null,
+          included: true, detail: k.detail || null,
+        });
+        if (error) throw error;
+        added++;
+      } else if (!existing.detail && k.detail) {
+        const { error } = await supabase.from("classes").update({ detail: k.detail }).eq("id", existing.id);
+        if (error) throw error;
+        filled++;
+      }
+    }
+  }
+  return { added, filled };
+}
+
 /* ═══════════════════════════ Escritura: clases ═════════════════════════ */
 export async function insertClass(plantId, classData) {
   const { data, error } = await supabase
