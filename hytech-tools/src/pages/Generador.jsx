@@ -2,273 +2,18 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Layers, ChevronDown, ChevronRight, X, Table2, CircleDot, GitBranch, StickyNote,
   Gauge, Search, Info, FileWarning, Plus, Pencil, Copy, Trash2, Building2, RotateCcw,
-  CheckSquare, Square, Check, Save,
+  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2,
 } from "lucide-react";
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   MOTOR DE NOMENCLATURA · A-B-C-D  ·  018-ABDC-00300-TI-C-0001 Rev.1 pág.3
-   ═══════════════════════════════════════════════════════════════════════════ */
-const NAMING = {
-  A: { label: "Rating de bridas y accesorios", slot: "A", rows: [
-    { code: "A", value: "150# / 125# / PN16" }, { code: "B", value: "300#" },
-    { code: "C", value: "600#" }, { code: "D", value: "900#" }, { code: "E", value: "1500#" } ] },
-  B: { label: "Grado de material", slot: "B", rows: [
-    { code: "C", value: "Carbon Steel" }, { code: "G", value: "Carbon Steel Galv." },
-    { code: "L", value: "Carbon Steel Low Temp" }, { code: "S", value: "Stainless Steel" },
-    { code: "D", value: "Duplex" }, { code: "P", value: "Polyethylene" }, { code: "F", value: "Fiberglass" } ] },
-  C: { label: "Corrosión permitida", slot: "C", rows: [
-    { code: "0", value: "0 mm" }, { code: "1", value: "1,6 mm" },
-    { code: "3", value: "3,2 mm" }, { code: "6", value: "6,4 mm" } ] },
-  D: { label: "Requisito adicional", slot: "D", rows: [
-    { code: "A", value: "Sand Services" }, { code: "R", value: "Internal Coating" },
-    { code: "RA", value: "Sand Services & Int. Coat." }, { code: "N", value: "NACE MR0175" },
-    { code: "F", value: "Fire water systems" }, { code: "G", value: "GRP (PRFV)" },
-    { code: "E", value: "GRE (ERFV) Epoxy" }, { code: "X", value: "Cross-linked PE (PEX)" },
-    { code: "H", value: "HDPE (PEAD)" }, { code: "M", value: "316/316L" },
-    { code: "S", value: "304/304L" }, { code: "T", value: "321/321L" } ] },
-};
-const FAMILIES = {
-  gas: "Gas y utilitarios", hc: "Hidrocarburos", venteo: "Venteos y antorcha",
-  fire: "Agua contra incendio", wepoxy: "Agua prod./iny. · acero c/ epoxi",
-  wss: "Agua prod./iny. · acero inox", wnm: "Agua prod./iny. · no metálica",
-  wserv: "Agua de servicio y drenajes", custom: "Clases propias",
-};
-const BRANCH_METAL = {
-  legend: ["S.W. Equal Tee", "S.W. Reducing Tee", "Beveled End Equal Tee",
-    "Beveled End Reducing Tee (* rama menor biselada)", "Weldolet", "Sockolet"],
-  sizes: ['½"', '¾"', '1"', '1½"', '2"', '3"', '4"', '6"'],
-  m: {
-    '½"': { '½"': 1, '¾"': 2, '1"': 2, '1½"': 2, '2"': 6, '3"': 6, '4"': 6, '6"': 6 },
-    '¾"': { '¾"': 1, '1"': 2, '1½"': 2, '2"': 6, '3"': 6, '4"': 6, '6"': 6 },
-    '1"': { '1"': 1, '1½"': 2, '2"': 6, '3"': 6, '4"': 6, '6"': 6 },
-    '1½"': { '1½"': 1, '2"': 6, '3"': 6, '4"': 6, '6"': 6 },
-    '2"': { '2"': 3, '3"': 4, '4"': 4, '6"': 5 }, '3"': { '3"': 3, '4"': 4, '6"': 4 },
-    '4"': { '4"': 3, '6"': 4 }, '6"': { '6"': 3 } },
-  note: "Extracto ½\"–6\" del documento (matriz completa hasta 24\"/36\").",
-};
-const BRANCH_PEX = {
-  legend: ["Equal Tee", "Reducing Tee", "Stub In"],
-  sizes: ['1"', '1½"', '2"', '3"', '4"', '6"', '8"'],
-  m: {
-    '1"': { '1"': 1, '1½"': 2, '2"': 3, '3"': 3, '4"': 3, '6"': 3, '8"': 3 },
-    '1½"': { '1½"': 1, '2"': 2, '3"': 3, '4"': 3, '6"': 3, '8"': 3 },
-    '2"': { '2"': 1, '3"': 2, '4"': 3, '6"': 3, '8"': 3 }, '3"': { '3"': 1, '4"': 2, '6"': 2, '8"': 3 },
-    '4"': { '4"': 1, '6"': 2, '8"': 2 }, '6"': { '6"': 1, '8"': 2 }, '8"': { '8"': 1 } },
-  note: "Extracto 1\"–8\" del documento (matriz completa hasta 16\").",
-};
-const COMP_COLS = ["Descripción", "Material", "Sch.", "Rating", "Dim. Code", "Ends", "Size", "Notas"];
-const VALVE_COLS = ["Tipo", "Commodity Code", "Bore", "Type", "Rating", "End", "Size", "Notas"];
-const c = (...a) => a;
-const v = (...a) => a;
-
-const AC1 = {
-  designT: ["-29 a 38", "50", "100", "150", "200"], designP: ["20", "19,6", "18", "16,1", "14,1"],
-  comps: [
-    c("Seamless Pipe", "API 5L Gr. B", "80", "", "ASME B36.10M", "PE", '½"–1½"', "(1)(2)"),
-    c("", "", "40", "", "", "BE", '2"–6"', "(1)(2)"), c("", "", "20", "", "", "BE", '8"–12"', "(1)(2)"),
-    c("SAWL Pipe (100% RX)", "API 5L Gr. B", "10", "", "ASME B36.10M", "BE", '14"–18"', "(1)(2)"),
-    c("", "", "20", "", "", "BE", '20"–24"', "(1)(2)"),
-    c("Seamless Pipe (Nipple)", "ASTM A106 Gr.B", "80", "", "ASME B36.10", "PExNPT", '½"–1½"', "(4)(13)"),
-    c("Forged Fittings", "ASTM A-105", "", "3000#", "ASME B16.11", "SW", '½"–1½"', "(18)"),
-    c("Hexagonal Head Plug", "ASTM A-105", "", "3000#", "ASME B16.11", "NPT", '½"–1½"', "(4)(12)(13)"),
-    c("Wrought Pipe Fittings", "ASTM A-234 Gr. WPB", "", "", "ASME B16.9", "BW", '2"–24"', "(5)"),
-    c("Flange", "ASTM A-105", "", "150#", "ASME B16.5", "SW/RF", '½"–1½"', "(5)"),
-    c("", "", "", "150#", "", "WN/RF", '2"–24"', "(5)"),
-    c("Blind Flange", "ASTM A-105", "", "150#", "ASME B16.5", "BLIND RF", '½"–24"', "(5)"),
-    c("Orifice Flange", "ASTM A-105", "", "300#", "ASME B16.36", "WN/RF", '1"–24"', "(5)(16)"),
-    c("Gaskets", "304 SS Flexible Graphite filler", "", "150#/300#", "ASME B16.20", "—", '½"–24"', "(10)"),
-    c("Stud Bolts", "ASTM A-193 Gr. B7-ZINC", "", "", "ASME B18.2.1", "—", "—", "(11)(17)"),
-    c("Nuts", "ASTM A-194 Gr. 2H-ZINC", "", "", "ASME B18.2.2", "—", "—", ""),
-    c("Spectacle Blind", "ASTM A-516 Gr. 70", "", "150#", "ASME B16.48", "RF", '1"–12"', "(7)(14)(15)"),
-    c("Paddle & Spacer Blind", "ASTM A-516 Gr. 70", "", "150#", "", "RF", '14"–24"', ""),
-    c("Drip Ring", "ASTM A-516 Gr. 70", "", "150#", "", "RF", '1"–12"', ""),
-    c("Dielectric Joint", "Ver Nota 9", "", "150#", "ASME B16.21", "RF", '½"–24"', "(9)"),
-    c("Olet Fittings", "ASTM A-105", "", "3000#", "MSS SP-97", "SW-NPT", '½"–1½"', "(5)(13)"),
-    c("", "", "", "3000#", "", "BW-NPT", '2"–24"', "(5)(13)"),
-    c("Swage Nipple", "ASTM A234 Gr. WPB", "", "", "MSS SP-95", "BW-PE", '1"–4"', "(4)(5)"),
-  ],
-  valves: [
-    v("Ball", "RCJ8SW0", "Reduced", "—", "800#", "PE", '½"–1½"', "(4)"),
-    v("Ball", "FCJ8SW0", "Full", "—", "800#", "PE", '½"–1½"', "(4)"),
-    v("Ball", "VBA1WC005", "Full", "—", "2000WOG", "PExNPT-F", '½"–1½"', "(3)"),
-    v("Ball", "RCC1RW0", "Reduced", "—", "150#", "RF", '2"–6"', ""),
-    v("Ball", "FCC1RW0", "Full", "—", "150#", "RF", '2"–6"', ""),
-    v("Ball", "VBA01C020", "Reduced", "—", "150#", "RF", '8"–24"', ""),
-    v("Ball", "VBA01C018", "Full", "—", "150#", "RF", '8"–24"', ""),
-    v("Gate", "ECB8SH0", "—", "—", "800#", "SW", '½"–1½"', ""),
-    v("Gate", "ECB1RH0", "—", "—", "150#", "RF", '2"–12"', "HW/Gear Box ≥12\""),
-    v("Gate", "ECB1RG0", "—", "—", "150#", "RF", '14"–24"', "Gear Box"),
-    v("Globe", "GCB8SH0", "—", "—", "800#", "SW", '½"–1½"', ""),
-    v("Globe", "GCB1RH0", "—", "—", "150#", "RF", '2"–12"', "HW/Gear Box ≥8\""),
-    v("Globe", "GCB1RG0", "—", "—", "150#", "RF", '14"–24"', "Gear Box"),
-    v("Butterfly", "BCJ1W00", "—", "Wafer", "150#", "-", '3"–12"', "Operator: By Vendor"),
-    v("Butterfly", "BCJ1L00", "—", "Lug", "150#", "-", '14"–24"', "Operator: By Vendor"),
-    v("Check", "CCB8SP0", "—", "Piston", "800#", "SW", '½"–1½"', "(2)"),
-    v("Check", "CCB1WD0", "—", "Dual-Plate", "150#", "RF", '2"–12"', ""),
-    v("Check", "CCB1LD0", "—", "Dual-Plate", "150#", "-", '14"–24"', "Lug Type"),
-  ],
-  branch: BRANCH_METAL,
-  notes: [
-    "Extremos biselados según ASME B16.25.",
-    "Cañería enterrada: coating externo (3LPE/3LPP por NAG 108) según temperatura de servicio.",
-    "Extremo NPT según ASME B1.20.1.", "El bore debe coincidir con el schedule de la cañería.",
-    "Bridas y extremos bridados: cara serrada spiral 125–250 AARH máx.",
-    "Junta dieléctrica: sólo tipo Pikotek VCS (no Micarta).",
-    "Gaskets, sellos y empaquetaduras: libres de asbesto.",
-    "Espárragos roscados en toda su longitud, con dos tuercas pesadas.",
-    "Tapones hexagonales roscados sólo para venteos y drenajes.",
-    "Fittings roscados sobre process piping: sólo termopozos y venteos de prueba hidráulica.",
-  ],
-};
-const BC1 = {
-  designT: ["-29 a 38", "50", "100", "150", "200"], designP: ["52,1", "51,1", "47,5", "46", "44,7"],
-  comps: [
-    c("Seamless Pipe", "ASTM A106 Gr. B", "80", "", "ASME B36.10M", "PE", '½"–1½"', "(2)"),
-    c("", "ASTM A106 Gr B", "40", "", "", "BE", '2"', "(2)"), c("", "", "40", "", "", "BE", '3"–4"', "(2)"),
-    c("", "", "40", "", "", "BE", '6"', "(2)"), c("", "", "30", "", "", "BE", '8"–10"', "(2)"),
-    c("", "", "STD", "", "", "BE", '12"', "(2)"),
-    c("SAWL Pipe (100% RX)", "API 5L Gr. B SAWL", "30", "", "ASME B36.10M", "BE", '14"', "(2)(7)(12)"),
-    c("", "", "XS", "", "", "BE", '16"–18"', "(2)(7)(12)"), c("", "", "30", "", "", "BE", '20"', "(2)(7)(12)"),
-    c("", "", "15,88", "", "", "BE", '24"', "(2)(7)(12)"), c("", "", "Nota 13", "", "", "BE", '30"', "(13)"),
-    c("", "", "Nota 13", "", "", "BE", '36"', "(13)"),
-    c("SMLS Pipe Niple", "ASTM A106 Gr B", "160", "", "ASME B36.10M", "NPTxPE", '½"–¾"', "(6)"),
-    c("", "", "80", "", "", "NPTxPE", '1"–1½"', "(6)"),
-    c("Forged Fittings", "ASTM A105", "", "3000#", "ASME B16.11", "SW", '½"–1½"', "(3)(12)"),
-    c("Wrought Pipe Fittings", "ASTM A234 WPB", "", "", "ASME B16.9", "BW", '2"–36"', "(3)(12)"),
-    c("Flange", "ASTM A105", "", "300#", "ASME B16.5", "SW/RF", '½"–1½"', "(4)(5)(12)"),
-    c("", "", "", "300#", "", "WN/RF", '2"–24"', "(4)(5)(12)"),
-    c("", "", "", "300#", "ASME B16.47 Serie A", "RF", '26"–36"', "(4)(5)(12)"),
-    c("Blind Flange", "ASTM A105", "", "300#", "ASME B16.5", "RF", '½"–24"', "(4)(5)(12)"),
-    c("", "", "", "300#", "ASME B16.47 Serie A", "RF", '26"–36"', "(4)(5)(12)"),
-    c("Orifice Flange", "ASTM A-105", "", "300#", "ASME B16.36", "WN RF", '2"–24"', "(5)(12)"),
-    c("Spiral Wound Gasket", "304 SS Flexible Graphite filler", "", "300#", "ASME B16.20", "RF", '½"–36"', "(10)"),
-    c("Stud Bolts", "ASTM A-193 Gr.B7-ZINC", "", "", "ASME B18.2.1", "—", "—", "(11)(14)"),
-    c("Nuts", "ASTM A-194 Gr.2H-ZINC", "", "", "ASME B18.2.2", "—", "—", ""),
-    c("Spectacle Blind", "ASTM A516 Gr.70", "", "300#", "ASME B16.48", "RF", '1"–12"', "(15)(16)(17)"),
-    c("Paddle & Spacer Blind", "ASTM A516 Gr.70", "", "300#", "ASME B16.48", "RF", '14"–24"', "(15)(16)(17)"),
-    c("Drip Ring", "ASTM A516 Gr.70", "", "300#", "", "RF", '1"–12"', "(15)(16)(17)"),
-    c("Dielectric Joint", "Ver Nota 9", "", "300#", "ASME B16.21", "RF", '½"–24"', "(9)"),
-    c("Swage Nipple", "ASTM A105 / A234 WPB", "", "", "MSS SP-95", "SW-BW", '½"–4"', "(6)"),
-    c("Olet Fittings", "ASTM A105", "", "6000#/3000#", "MSS SP-97", "SW-BW", '½"–24"', "(5)(6)"),
-  ],
-  valves: [
-    v("Ball", "VBA1WC004", "Full", "—", "1500WOG", "PE", '½"–1½"', "5"),
-    v("Ball", "VBA1WC001", "Reduced", "—", "1500WOG", "PE", '½"–1½"', "5"),
-    v("Ball", "VBA1WC005", "Full", "—", "2000WOG", "NPT-F x PE", '½"–1½"', "4"),
-    v("Ball", "VBA03C018", "Full", "—", "300#", "RF", '2"–4"', ""),
-    v("Ball", "VBA03C019", "Reduced", "—", "300#", "RF", '2"–4"', ""),
-    v("Ball", "VBA04C001", "Full", "—", "300#", "RF", '4"–36"', "3"),
-    v("Ball", "VBA04C002", "Reduced", "—", "300#", "RF", '6"–36"', "3"),
-    v("Butterfly", "VBY03C003", "—", "Wafer/Lug", "300#", "-", '3"–24"', "Wrench/Gear box ≥4\""),
-    v("Check", "VCP08C001", "—", "Piston", "800#", "SW", '½"–1½"', "2"),
-    v("Check", "VCK03C010", "—", "Swing", "300#", "RF", '2"–12"', ""),
-    v("Check", "VCK03C007", "—", "Dual Plate", "300#", "-", '14"–24"', "Wafer Type"),
-    v("Gate", "VGA08C007", "—", "—", "800#", "SW", '½"–1½"', ""),
-    v("Gate", "VGA04C001", "—", "—", "300#", "RF", '2"–36"', "HW/Gear Box ≥10\""),
-    v("Globe", "VGL08C004", "—", "—", "800#", "SW", '½"–1½"', ""),
-    v("Globe", "VGL03C006", "—", "—", "300#", "RF", '2"–12"', "HW/Gear Box ≥8\""),
-  ],
-  branch: BRANCH_METAL,
-  notes: [
-    "Estándar dimensional: ASME B16.5 (bridas), B16.9 (BW), B16.11 (forjados), B16.10 (válvulas).",
-    "Cañería enterrada: coating externo (3LPE/3LPP por NAG 108) según temperatura.",
-    "El espesor de los fittings reductores debe igualar la pared más gruesa.",
-    "Bridas y extremos bridados: cara serrada spiral 125–250 AARH máx.",
-    "Cañería SAWL soldada (costura recta) con 100% de radiografía.",
-    "Toda soldadura de cañería de espesor mayor a 3/4\" debe relevarse de tensiones.",
-    "Junta dieléctrica: sólo tipo Pikotek VCS.",
-    "Schedule para cañerías de 30\" y mayores: definido por proyecto (SAWL API 5L Gr.B).",
-  ],
-};
-const AP0X = {
-  designT: ["0 a 60"], designP: ["16,3"],
-  comps: [
-    c("Pipe", "PEX (Crosslinked PE) PE-100", "SDR 6 (S2.5)", "", "ISO 14531 / DIN 16892/16893", "—", '2"–16"', "(1)(2)(12)"),
-    c("Jointing Method", "Electrofusión (con coupling)", "", "", "—", "—", "—", "(2)(6)"),
-    c("Fittings", "Electrofusión HDPE PE-100 reforzado con metal", "", "", "ISO 14531 P2&3", "—", '2"–16"', "(2)(3)(4)(17)(18)"),
-    c("Flange", "Flanged coupler ASTM A-536 65-45-12", "", "150#", "ASME B16.5", "FF", '2"–16"', "(5)"),
-    c("Flange Lap-Joint", "ASTM A105 galvanizado (con stub end)", "", "150#", "ASME B16.5", "FF", '2"–16"', "(16)"),
-    c("Closures", "Blind Flange ASTM A105 (PTFE lined)", "", "150#", "ASME B16.5", "FF", '2"–16"', ""),
-    c("Spectacle Blind", "ASTM A-516 Gr. 70 (PTFE lined)", "", "150#", "ASME B16.48", "FF", '2"–12"', ""),
-    c("Paddle & Spacer", "ASTM A-516 Gr. 70 (PTFE lined)", "", "150#", "ASME B16.48", "FF", '14"–16"', ""),
-    c("Bolts & Nuts", "A193 GrB7-ZINC / A194 Gr2H-ZINC", "", "", "ASME B18.2.1/2", "—", "—", "(11)(14)(15)"),
-    c("Gasket", "Full Face, PTFE expandido e=3,2mm", "", "150#", "ASME B16.21", "FF", '2"–16"', "(13)"),
-  ],
-  valves: [
-    v("Ball", "VBA01C028", "Reduced", "—", "150#", "FF", '2"–6"', "(3)(5)"),
-    v("Ball", "VBA01C029", "Reduced", "—", "150#", "FF", '8"–16"', "(3)(5)"),
-    v("Gate", "VGA01C011", "—", "—", "150#", "FF", '2"–16"', "(4)(5) HW/Gear box ≥12\""),
-    v("Globe", "VGL01C011", "—", "—", "150#", "FF", '2"–10"', "(3)(4)(5) HW/Gear box ≥8\""),
-    v("Butterfly", "VBY01C010", "—", "Lug", "150#", "FF", '3"–12"', "(2)(5) HW/Gear box ≥8\""),
-    v("Check", "VCK01C014", "—", "Swing", "150#", "FF", '2"–16"', "(3)(4)(5)"),
-  ],
-  branch: BRANCH_PEX,
-  notes: [
-    "El espesor de pared de la cañería lo confirma el proveedor final según la clase de presión.",
-    "Cañería y fittings PEX sobre superficie: protegidos contra UV.",
-    "Fittings por electrofusión, compatibles con ISO 14531 Parte 2&3.",
-    "El rating de presión de cañería y fittings debe registrarse en la documentación del fabricante.",
-    "Algunas derivaciones bridadas pueden ser de acero inoxidable según el proveedor.",
-    "Temperatura de servicio de fittings de electrofusión PE-100 limitada a 40°C; a mayor temperatura, fittings reforzados con metal.",
-  ],
-};
-
-const CLASSES = [
-  { code: "AC1", fam: "gas", detail: AC1, page: 7, mat: "C.S.", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C", services: ["Fuel Gas", "Service Air", "Starting Air", "Nitrogen", "Glycol", "Flare", "Atm. Vents", "Gas Lift", "Hydrocarbons liquid & Gas"] },
-  { code: "AC3", fam: "wserv", page: 11, mat: "C.S.", corr: "3,2mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C", services: ["Service Water", "Open Drain", "Close Drain", "Hydrocarbons liquid & Gas"] },
-  { code: "AL1", fam: "venteo", page: 15, mat: "Low T. C.S.", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -45 a 38°C", services: ["Low Temp. Flare", "Cold Vents"] },
-  { code: "AC3F", fam: "fire", page: 19, mat: "C.S. / Galv.", corr: "3,2 / 0,0mm", rating: "150#", design: "20 kg/cm² @ 0 a 38°C", services: ["Fire Water (AG wet service)"] },
-  { code: "AG0F", fam: "fire", page: 22, mat: "C.S. Hot Dip Galv.", corr: "0,0mm", rating: "150#", design: "14 kg/cm² @ -29 a 38°C", services: ["Fire Water (AG dry service)"] },
-  { code: "AG0", fam: "gas", page: 25, mat: "C.S. Galv.", corr: "0mm", rating: "150#", design: "20 kg/cm² @ -29 a 38°C", services: ["Instrument Air"] },
-  { code: "BC1", fam: "hc", detail: BC1, page: 28, mat: "C.S.", corr: "1,6mm", rating: "300#", design: "52,1 kg/cm² @ -29 a 38°C", services: ["Hydrocarbons liquid & Gas with treatment", "Hydrocarbons liquid & Gas without treatment"] },
-  { code: "BC3", fam: "hc", page: 32, mat: "C.S.", corr: "3,2mm", rating: "300#", design: "52,1 kg/cm² @ -29 a 38°C", services: ["Hydrocarbons liquid & Gas with treatment", "Hydrocarbons liquid & Gas without treatment"] },
-  { code: "BC3A", fam: "hc", page: 36, mat: "C.S.", corr: "3,2mm", rating: "300#", design: "52,1 kg/cm² @ -29 a 38°C", services: ["Hydrocarbons liquid & Gas with sand service"] },
-  { code: "CC1", fam: "hc", page: 40, mat: "C.S.", corr: "1,6mm", rating: "600#", design: "104,1 kg/cm² @ -29 a 38°C", services: ["Hydrocarbons liquid & Gas with treatment"] },
-  { code: "DC1", fam: "hc", page: 43, mat: "C.S.", corr: "1,6mm", rating: "900#", design: "150 kg/cm² @ -29 a 65°C", services: ["Hydrocarbons Gas with treatment"] },
-  { code: "AF0G", fam: "wnm", page: 47, mat: "GRP", corr: "NA", rating: "150#", design: "10,5 kg/cm² @ 0 a 80°C", services: ["Produced Water (AG & UG)"] },
-  { code: "AP0X", fam: "wnm", detail: AP0X, page: 51, mat: "PEX", corr: "NA", rating: "150#", design: "16,3 kg/cm² @ 0 a 60°C", services: ["Produced Water (AG & UG)"] },
-  { code: "AC1R", fam: "wepoxy", page: 55, mat: "C.S. w/ int. coating", corr: "1,6mm", rating: "150#", design: "20 kg/cm² @ -20 a 38°C", services: ["Produced Water", "Injection Water"] },
-  { code: "BC1R", fam: "wepoxy", page: 59, mat: "C.S. w/ int. coating", corr: "1,6mm", rating: "300#", design: "52,1 kg/cm² @ -20 a 38°C", services: ["Produced Water", "Injection Water"] },
-  { code: "DC1R", fam: "wepoxy", page: 63, mat: "C.S. w/ int. coating", corr: "1,6mm", rating: "900#", design: "156,2 kg/cm² @ -20 a 38°C", services: ["Produced Water", "Injection Water"] },
-  { code: "EC1R", fam: "wepoxy", page: 67, mat: "C.S. w/ int. coating", corr: "1,6mm", rating: "1500#", design: "210,8 kg/cm² @ -20 a 38°C", services: ["Produced Water", "Injection Water"] },
-  { code: "AP0H", fam: "wserv", page: 71, mat: "HDPE", corr: "0mm", rating: "150#/PN16", design: "16,31 kg/cm² @ 21°C", services: ["Service Water Underground"] },
-  { code: "AP0HF", fam: "fire", page: 74, mat: "HDPE", corr: "0mm", rating: "125/150#/PN16", design: "16,31 kg/cm² @ 21°C", services: ["Fire Water (UG wet service)"] },
-  { code: "BS0M", fam: "wss", page: 77, mat: "S.S.", corr: "0,0mm", rating: "300#", design: "39,91 kg/cm² @ -29 a 38°C", services: ["Produced Water", "Injection Water", "(complementa AC1R en diámetros menores)"] },
-  { code: "CS0M", fam: "wss", page: 80, mat: "S.S.", corr: "0,0mm", rating: "600#", design: "81,92 kg/cm² @ -29 a 38°C", services: ["Produced Water", "Injection Water", "(complementa BC1R en diámetros menores)"] },
-  { code: "ES0M", fam: "wss", page: 83, mat: "S.S.", corr: "0,0mm", rating: "1500#", design: "207,76 kg/cm² @ -20 a 38°C", services: ["Produced Water", "Injection Water", "(complementa DC1R/EC1R en diámetros menores)"] },
-  { code: "BC6", fam: "hc", page: 86, mat: "C.S.", corr: "6,4mm", rating: "300#", design: "52,1 kg/cm² @ -29 a 38°C", services: ["Hydrocarbons liquid & Gas without treatment"] },
-];
-
-const seedClasses = () => CLASSES.map((k) => ({ ...k, on: true }));
-const SEED_PLANTS = [
-  { id: "epf-og", name: "EPF · Oil & Gas Upstream (PCN)",
-    kind: "Central de producción temprana — crudo y gas no convencional",
-    ref: "018-ABDC-00300-TI-C-0001 · Rev.1", code: "ASME B31.3", seeded: true,
-    naming: NAMING, classes: seedClasses() },
-  { id: "hdt-ref", name: "Refinería · Unidad HDT",
-    kind: "Hidrotratamiento — plantilla base a completar",
-    ref: "—", code: "ASME B31.3", seeded: false, naming: NAMING, classes: [] },
-  { id: "litio", name: "Planta de Litio · Concentradora",
-    kind: "Minería / salmuera — plantilla base a completar",
-    ref: "—", code: "ASME B31.3", seeded: false, naming: NAMING, classes: [] },
-];
-
-const ratingLevel = (r) =>
-  /1500/.test(r) ? 5 : /900/.test(r) ? 4 : /600/.test(r) ? 3 : /300/.test(r) ? 2 : 1;
-const clone = (x) => JSON.parse(JSON.stringify(x));
-const uid = () => "p" + Math.random().toString(36).slice(2, 8);
-
-/* Persistencia en localStorage del navegador ─────────────────────────────── */
-const STORE_KEY = "pcgen:plants:v1";
-function storageLoad() {
-  try {
-    const raw = window.localStorage.getItem(STORE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) { return null; }
-}
-function storageSave(plants) {
-  try { window.localStorage.setItem(STORE_KEY, JSON.stringify(plants)); } catch (e) {}
-}
+import {
+  FAMILIES, COMP_COLS, VALVE_COLS, SEED_PLANTS, ratingLevel, clone, uid,
+  seedClasses, seedLaCalera, EPF_CODE_CONVENTION, FREEFORM_CODE_CONVENTION,
+} from "../data/plants";
+import {
+  fetchAllPlants, ensureSeeded, insertClass, updateClassWithRevision, toggleClassIncluded,
+  deleteClass, markReviewed, clearReviewed, createPlant, renamePlant as apiRenamePlant,
+  deletePlant as apiDeletePlant, fetchRevisions, bulkInsertClasses, resetPlantClasses,
+} from "../lib/api";
+import { useAuth } from "../components/AuthGate";
 
 /* ═══════════════════════════════ UI ════════════════════════════════════ */
 function Gauge5({ level }) {
@@ -381,17 +126,68 @@ function BranchMatrix({ data }) {
 const TABS = [
   { id: "cond", label: "Condiciones", icon: Gauge }, { id: "comp", label: "Componentes", icon: Table2 },
   { id: "valv", label: "Válvulas", icon: CircleDot }, { id: "branch", label: "Ramificaciones", icon: GitBranch },
-  { id: "notes", label: "Notas", icon: StickyNote },
+  { id: "notes", label: "Notas", icon: StickyNote }, { id: "hist", label: "Historial", icon: History },
 ];
 const emptyDetail = () => ({ designT: [""], designP: [""], comps: [], valves: [], branch: { legend: [], sizes: [], m: {}, note: "" }, notes: [] });
 
-function DetailPanel({ item, onClose, onSave }) {
+function RevisionHistory({ classId }) {
+  const [revs, setRevs] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetchRevisions(classId).then((r) => { if (alive) setRevs(r); }).catch(() => setRevs([]));
+    return () => { alive = false; };
+  }, [classId]);
+  if (revs === null) return <div className="text-[13px] text-slate-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Cargando historial…</div>;
+  if (revs.length === 0) return <div className="text-[13px] text-slate-400">Todavía no hay ediciones guardadas para esta clase.</div>;
+  return (
+    <div className="space-y-2">
+      {revs.map((r) => (
+        <div key={r.id} className="border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <div className="flex items-center justify-between text-[12px]">
+            <span className="font-medium text-slate-800">{r.edited_by}</span>
+            <span className="text-slate-400 font-mono">{new Date(r.edited_at).toLocaleString("es-AR")}</span>
+          </div>
+          {r.note && <div className="text-[12px] text-slate-500 mt-0.5">{r.note}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReviewPanel({ item, onMark, onClear }) {
+  const [against, setAgainst] = useState(item.reviewedAgainst || "");
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3.5 flex items-start justify-between gap-3 flex-wrap">
+      <div className="min-w-0">
+        {item.reviewedBy ? (
+          <div className="text-[13px] text-slate-700">
+            <span className="text-emerald-700 font-medium flex items-center gap-1.5"><ShieldCheck size={14} /> Revisado por {item.reviewedBy}</span>
+            <div className="text-[12px] text-slate-500 mt-0.5">
+              {new Date(item.reviewedAt).toLocaleString("es-AR")}{item.reviewedAgainst ? ` · contra ${item.reviewedAgainst}` : ""}
+            </div>
+          </div>
+        ) : (
+          <div className="text-[13px] text-slate-500 flex items-center gap-1.5"><ShieldAlert size={14} className="text-amber-500" /> Todavía no fue marcada como revisada.</div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <input value={against} onChange={(e) => setAgainst(e.target.value)} placeholder="ej. ASME B31.3-2024"
+          className="text-[12px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none w-40" />
+        <button onClick={() => onMark(against)} className="text-[12px] px-2.5 py-1.5 rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E]">Marcar como revisado</button>
+        {item.reviewedBy && <button onClick={onClear} className="text-[12px] px-2.5 py-1.5 rounded-md text-slate-500 hover:bg-slate-100">Quitar</button>}
+      </div>
+    </div>
+  );
+}
+
+function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed }) {
   const [tab, setTab] = useState("cond");
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(null);
-  const originalCode = useRef(item.code);
+  const idRef = useRef(item.id);
 
-  useEffect(() => { originalCode.current = item.code; setEditing(false); setTab("cond"); }, [item]);
+  useEffect(() => { idRef.current = item.id; setEditing(false); setTab("cond"); }, [item]);
   useEffect(() => {
     if (editing) setDraft(clone({ ...item, detail: item.detail || emptyDetail() }));
   }, [editing, item]);
@@ -400,7 +196,11 @@ function DetailPanel({ item, onClose, onSave }) {
   const d = view.detail;
   const lvl = ratingLevel(view.rating);
   const setD = (patch) => setDraft((dr) => ({ ...dr, detail: { ...dr.detail, ...patch } }));
-  const save = () => { onSave(originalCode.current, draft); setEditing(false); };
+  const save = async () => {
+    setSaving(true);
+    try { await onSave(idRef.current, draft); setEditing(false); }
+    finally { setSaving(false); }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
@@ -435,7 +235,9 @@ function DetailPanel({ item, onClose, onSave }) {
           <div className="flex items-center gap-2 shrink-0">
             {editing ? (
               <>
-                <button onClick={save} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E]"><Save size={14} /> Guardar</button>
+                <button onClick={save} disabled={saving} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E] disabled:opacity-60">
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar
+                </button>
                 <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-[13px] rounded-md text-slate-500 hover:bg-slate-100">Cancelar</button>
               </>
             ) : (
@@ -444,6 +246,12 @@ function DetailPanel({ item, onClose, onSave }) {
             <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400"><X size={18} /></button>
           </div>
         </div>
+
+        {!editing && (
+          <div className="px-5 pt-3 bg-white">
+            <ReviewPanel item={item} onMark={(against) => onMarkReviewed(item.id, against)} onClear={() => onClearReviewed(item.id)} />
+          </div>
+        )}
 
         <div className="px-5 pt-3 bg-white border-b border-slate-200 flex gap-1 overflow-x-auto">
           {TABS.map((t) => {
@@ -458,7 +266,9 @@ function DetailPanel({ item, onClose, onSave }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {!d && !editing ? (
+          {tab === "hist" ? (
+            <RevisionHistory classId={item.id} />
+          ) : !d && !editing ? (
             <div className="flex flex-col items-center justify-center text-center py-16 text-slate-500">
               <FileWarning size={32} className="text-slate-300 mb-3" />
               <div className="text-sm font-medium text-slate-700 mb-1">Detalle todavía sin cargar</div>
@@ -569,34 +379,33 @@ function NotesEdit({ notes, onChange }) {
   );
 }
 
-function CodeStamp({ sel, setSel, classes }) {
-  const parts = ["A", "B", "C", "D"];
-  const assembled = parts.map((p) => sel[p] || "·").join("");
+function CodeStamp({ sel, setSel, classes, slots }) {
+  const assembled = slots.map((s) => sel[s.slot] || "·").join("");
   const match = classes.find((k) => k.code === assembled);
   return (
     <div className="rounded-xl bg-[#122542] text-slate-100 p-5">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8FAFD6] mb-4"><Layers size={13} /> Ensamblador de clase · A-B-C-D</div>
-      <div className="flex items-baseline justify-center gap-1 mb-4">
-        {parts.map((p) => (
-          <span key={p} className="flex flex-col items-center">
-            <span className={`font-mono text-4xl leading-none ${sel[p] ? "text-[#7FC4EE]" : "text-[#3C567F]"}`}>{sel[p] || "·"}</span>
-            <span className="mt-2 text-[10px] tracking-widest text-[#7291BB]">{p}</span>
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8FAFD6] mb-4"><Layers size={13} /> Ensamblador de clase</div>
+      <div className="flex items-baseline justify-center gap-1 mb-4 flex-wrap">
+        {slots.map((s) => (
+          <span key={s.slot} className="flex flex-col items-center">
+            <span className={`font-mono text-4xl leading-none ${sel[s.slot] ? "text-[#7FC4EE]" : "text-[#3C567F]"}`}>{sel[s.slot] || "·"}</span>
+            <span className="mt-2 text-[10px] tracking-widest text-[#7291BB]">{s.slot}</span>
           </span>
         ))}
       </div>
       <div className="text-center text-[13px] mb-4">
         {match ? <span className="text-emerald-300">Coincide con <span className="font-mono font-semibold">{match.code}</span></span>
-          : assembled !== "····" ? <span className="text-[#8FAFD6]">Sin clase en este registro</span>
+          : assembled !== "·".repeat(slots.length) ? <span className="text-[#8FAFD6]">Sin clase en este registro</span>
           : <span className="text-[#7291BB]">Ensamblá cada segmento</span>}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {parts.map((p) => (
-          <div key={p}>
-            <div className="text-[10px] uppercase tracking-wider text-[#7291BB] mb-1">{p} · {NAMING[p].label}</div>
-            <select value={sel[p] || ""} onChange={(e) => setSel({ ...sel, [p]: e.target.value })}
+        {slots.map((s) => (
+          <div key={s.slot}>
+            <div className="text-[10px] uppercase tracking-wider text-[#7291BB] mb-1">{s.slot} · {s.label}</div>
+            <select value={sel[s.slot] || ""} onChange={(e) => setSel({ ...sel, [s.slot]: e.target.value })}
               className="w-full bg-[#1D3A63] text-slate-100 text-[13px] rounded-md px-2 py-1.5 border border-[#2C4C7C] focus:border-[#3F72AC] focus:outline-none">
               <option value="">—</option>
-              {NAMING[p].rows.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.value}</option>)}
+              {s.rows.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.value}</option>)}
             </select>
           </div>
         ))}
@@ -604,21 +413,21 @@ function CodeStamp({ sel, setSel, classes }) {
     </div>
   );
 }
-function Convention() {
+function Convention({ slots }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 py-3 text-left">
-        <span className="flex items-center gap-2 text-sm font-medium text-slate-800"><Info size={15} className="text-slate-400" /> Convención A-B-C-D</span>
+        <span className="flex items-center gap-2 text-sm font-medium text-slate-800"><Info size={15} className="text-slate-400" /> Convención de códigos</span>
         {open ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
       </button>
       {open && (
         <div className="px-4 pb-4 space-y-3">
-          {Object.values(NAMING).map((t) => (
-            <div key={t.slot}>
-              <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1.5"><span className="font-mono font-semibold text-[#1F3F6E]">{t.slot}</span> · {t.label}</div>
+          {slots.map((s) => (
+            <div key={s.slot}>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1.5"><span className="font-mono font-semibold text-[#1F3F6E]">{s.slot}</span> · {s.label}</div>
               <div className="border border-slate-200 rounded-md overflow-hidden">
-                {t.rows.map((r, i) => (
+                {s.rows.map((r, i) => (
                   <div key={r.code} className={`flex text-[12px] ${i % 2 ? "bg-slate-50" : "bg-white"}`}>
                     <div className="w-10 shrink-0 font-mono font-semibold text-slate-700 px-2 py-1 border-r border-slate-100">{r.code}</div>
                     <div className="px-2 py-1 text-slate-600">{r.value}</div>
@@ -633,13 +442,23 @@ function Convention() {
   );
 }
 
+function ReviewBadge({ item }) {
+  if (!item.reviewedBy) return <span className="text-[10.5px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded flex items-center gap-1"><ShieldAlert size={11} /> sin revisar</span>;
+  const date = new Date(item.reviewedAt).toLocaleDateString("es-AR");
+  return (
+    <span className="text-[10.5px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1" title={`Revisado por ${item.reviewedBy} el ${date}${item.reviewedAgainst ? " contra " + item.reviewedAgainst : ""}`}>
+      <ShieldCheck size={11} /> revisado {date}
+    </span>
+  );
+}
+
 function RegisterCard({ item, onOpen, onToggle, onDuplicate, onRemove }) {
   const lvl = ratingLevel(item.rating);
   return (
     <div className={`group relative rounded-lg border bg-white transition p-3.5 ${item.on ? "border-slate-200 hover:border-[#7FC4EE] hover:shadow-sm" : "border-slate-100 opacity-60"}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <button onClick={() => onToggle(item.code)} title={item.on ? "Incluida en el proyecto" : "Excluida del proyecto"}>
+          <button onClick={() => onToggle(item)} title={item.on ? "Incluida en el proyecto" : "Excluida del proyecto"}>
             {item.on ? <CheckSquare size={16} className="text-[#2C568E]" /> : <Square size={16} className="text-slate-300" />}
           </button>
           <button onClick={() => onOpen(item)} className="font-mono text-lg font-bold text-slate-900 hover:text-[#1F3F6E]">{item.code}</button>
@@ -654,19 +473,22 @@ function RegisterCard({ item, onOpen, onToggle, onDuplicate, onRemove }) {
           <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">CA {item.corr}</span>
         </div>
       </button>
-      <div className="mt-2 flex items-center justify-between">
-        {item.detail ? <span className="text-[10.5px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">detalle completo</span>
-          : <span className="text-[10.5px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">sólo resumen</span>}
+      <div className="mt-2 flex items-center justify-between gap-1 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          {item.detail ? <span className="text-[10.5px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">detalle completo</span>
+            : <span className="text-[10.5px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">sólo resumen</span>}
+          <ReviewBadge item={item} />
+        </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-          <button onClick={() => onDuplicate(item.code)} title="Duplicar" className="p-1 text-slate-400 hover:text-slate-700"><Copy size={13} /></button>
-          <button onClick={() => onRemove(item.code)} title="Eliminar" className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
+          <button onClick={() => onDuplicate(item)} title="Duplicar" className="p-1 text-slate-400 hover:text-slate-700"><Copy size={13} /></button>
+          <button onClick={() => onRemove(item)} title="Eliminar" className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
         </div>
       </div>
     </div>
   );
 }
 
-function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) {
+function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete, userEmail, onSignOut }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const active = plants.find((p) => p.id === activeId);
@@ -689,20 +511,30 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) 
           <button onClick={() => setRenaming(true)} className="p-1.5 text-slate-400 hover:text-slate-700" title="Renombrar"><Pencil size={14} /></button>
         )}
         {plants.length > 1 && <button onClick={() => onDelete(activeId)} className="p-1.5 text-slate-400 hover:text-red-500" title="Eliminar tipo de planta"><Trash2 size={14} /></button>}
-        <div className="relative ml-auto">
-          <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Plus size={14} /> Nuevo tipo de planta</button>
-          {menu && (
-            <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-[13px]">
-              <button onClick={() => { onNew("dup"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
-                <div className="font-medium text-slate-800">Duplicar estándar EPF</div>
-                <div className="text-[11px] text-slate-500">Arranca con las 23 clases pre-cargadas para editar</div>
-              </button>
-              <button onClick={() => { onNew("blank"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
-                <div className="font-medium text-slate-800">Empezar en blanco</div>
-                <div className="text-[11px] text-slate-500">Registro vacío, cargás tus clases</div>
-              </button>
-            </div>
-          )}
+        <div className="relative ml-auto flex items-center gap-3">
+          <div className="relative">
+            <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Plus size={14} /> Nuevo tipo de planta</button>
+            {menu && (
+              <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-[13px]">
+                <button onClick={() => { onNew("dup"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                  <div className="font-medium text-slate-800">Duplicar estándar EPF</div>
+                  <div className="text-[11px] text-slate-500">Arranca con las clases de EPF pre-cargadas para editar</div>
+                </button>
+                <button onClick={() => { onNew("blank-abcd"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                  <div className="font-medium text-slate-800">En blanco · convención A-B-C-D</div>
+                  <div className="text-[11px] text-slate-500">Registro vacío, código segmentado tipo EPF</div>
+                </button>
+                <button onClick={() => { onNew("blank-freeform"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                  <div className="font-medium text-slate-800">En blanco · código propio</div>
+                  <div className="text-[11px] text-slate-500">Registro vacío, cada clase con su propio código (tipo La Calera)</div>
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-[12px] text-slate-500 border-l border-slate-200 pl-3">
+            <span className="truncate max-w-[140px]" title={userEmail}>{userEmail}</span>
+            <button onClick={onSignOut} title="Cerrar sesión" className="text-slate-400 hover:text-red-500"><LogOut size={14} /></button>
+          </div>
         </div>
       </div>
       {active && (
@@ -716,69 +548,132 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) 
 }
 
 export default function Generador() {
-  const [plants, setPlants] = useState(SEED_PLANTS);
-  const [activeId, setActiveId] = useState(SEED_PLANTS[0].id);
+  const { email, signOut } = useAuth();
+  const [plants, setPlants] = useState([]);
+  const [activeId, setActiveId] = useState(null);
   const [ready, setReady] = useState(false);
-  const [openCode, setOpenCode] = useState(null);
+  const [err, setErr] = useState("");
+  const [openId, setOpenId] = useState(null);
   const [asm, setAsm] = useState({});
   const [q, setQ] = useState("");
   const [onlyIncluded, setOnlyIncluded] = useState(false);
 
+  const reload = async () => {
+    const data = await fetchAllPlants();
+    setPlants(data);
+    setActiveId((cur) => (data.find((p) => p.id === cur) ? cur : data[0]?.id));
+  };
+
   useEffect(() => {
-    const saved = storageLoad();
-    if (saved && Array.isArray(saved) && saved.length) {
-      setPlants(saved);
-      if (!saved.find((p) => p.id === activeId)) setActiveId(saved[0].id);
-    }
-    setReady(true);
+    (async () => {
+      try {
+        await ensureSeeded(SEED_PLANTS);
+        await reload();
+      } catch (e) {
+        setErr(e.message || "No se pudo conectar con la base de datos.");
+      } finally {
+        setReady(true);
+      }
+    })();
   }, []);
-  useEffect(() => { if (ready) storageSave(plants); }, [plants, ready]);
 
   const active = plants.find((p) => p.id === activeId) || plants[0];
-  const setActiveClasses = (fn) =>
-    setPlants((ps) => ps.map((p) => (p.id !== activeId ? p : { ...p, classes: fn(p.classes) })));
+
+  // Actualiza una clase en el estado local sin recargar todo (evita parpadeos).
+  const patchClassInState = (classId, patch) =>
+    setPlants((ps) => ps.map((p) => ({
+      ...p,
+      classes: p.classes.map((k) => (k.id === classId ? { ...k, ...patch } : k)),
+    })));
+  const removeClassFromState = (classId) =>
+    setPlants((ps) => ps.map((p) => ({ ...p, classes: p.classes.filter((k) => k.id !== classId) })));
+  const addClassToState = (plantId, cls) =>
+    setPlants((ps) => ps.map((p) => (p.id !== plantId ? p : { ...p, classes: [cls, ...p.classes] })));
 
   const uniqueCode = (base, list) => {
     let code = base, i = 2;
     while (list.find((k) => k.code === code)) code = `${base}-${i++}`;
     return code;
   };
-  const openItem = active.classes.find((k) => k.code === openCode) || null;
+  const openItem = active?.classes.find((k) => k.id === openId) || null;
 
   const handlers = {
-    toggle: (code) => setActiveClasses((cs) => cs.map((k) => (k.code === code ? { ...k, on: !k.on } : k))),
-    remove: (code) => { setActiveClasses((cs) => cs.filter((k) => k.code !== code)); if (openCode === code) setOpenCode(null); },
-    duplicate: (code) => setActiveClasses((cs) => {
-      const src = cs.find((k) => k.code === code); if (!src) return cs;
-      const copy = clone({ ...src, code: uniqueCode(src.code, cs), fam: "custom", page: null });
-      const idx = cs.findIndex((k) => k.code === code);
-      return [...cs.slice(0, idx + 1), copy, ...cs.slice(idx + 1)];
-    }),
-    addBlank: () => setActiveClasses((cs) => [
-      { code: uniqueCode("NUEVA", cs), fam: "custom", mat: "—", corr: "—", rating: "150#", page: null, on: true, services: ["Servicio nuevo"], detail: null },
-      ...cs,
-    ]),
-    saveClass: (originalCode, nc) => setActiveClasses((cs) => cs.map((k) => (k.code === originalCode ? { ...nc, on: k.on } : k))),
-    resetStandard: () => setActiveClasses(() => seedClasses()),
-    newPlant: (mode) => {
-      const np = {
-        id: uid(),
-        name: mode === "dup" ? "EPF (copia) — editar" : "Nueva planta",
-        kind: mode === "dup" ? "Duplicado del estándar EPF" : "Plantilla en blanco",
-        ref: "—", code: "ASME B31.3", seeded: false, naming: NAMING,
-        classes: mode === "dup" ? seedClasses() : [],
-      };
-      setPlants((ps) => [...ps, np]); setActiveId(np.id);
+    toggle: async (item) => {
+      patchClassInState(item.id, { on: !item.on });
+      try { await toggleClassIncluded(item.id, !item.on); } catch (e) { patchClassInState(item.id, { on: item.on }); }
     },
-    renamePlant: (id, name) => setPlants((ps) => ps.map((p) => (p.id === id ? { ...p, name } : p))),
-    deletePlant: (id) => setPlants((ps) => {
-      const next = ps.filter((p) => p.id !== id);
-      if (id === activeId && next.length) setActiveId(next[0].id);
-      return next.length ? next : ps;
-    }),
+    remove: async (item) => {
+      if (openId === item.id) setOpenId(null);
+      removeClassFromState(item.id);
+      try { await deleteClass(item.id); } catch (e) { await reload(); }
+    },
+    duplicate: async (item) => {
+      const code = uniqueCode(item.code, active.classes);
+      const created = await insertClass(active.id, { ...item, code, fam: "custom", page: null });
+      addClassToState(active.id, {
+        id: created.id, code: created.code, fam: created.fam, mat: created.mat, corr: created.corr,
+        rating: created.rating, design: created.design, services: created.services, page: created.page,
+        on: true, detail: created.detail, reviewedBy: null, reviewedAt: null, reviewedAgainst: null,
+      });
+    },
+    addBlank: async () => {
+      const code = uniqueCode("NUEVA", active.classes);
+      const created = await insertClass(active.id, { code, fam: "custom", mat: "—", corr: "—", rating: "150#", services: ["Servicio nuevo"] });
+      addClassToState(active.id, {
+        id: created.id, code: created.code, fam: created.fam, mat: created.mat, corr: created.corr,
+        rating: created.rating, design: created.design, services: created.services, page: created.page,
+        on: true, detail: null, reviewedBy: null, reviewedAt: null, reviewedAgainst: null,
+      });
+    },
+    saveClass: async (classId, draft) => {
+      const updated = await updateClassWithRevision(classId, {
+        code: draft.code, fam: draft.fam, mat: draft.mat, corr: draft.corr,
+        rating: draft.rating, design: draft.design, services: draft.services, detail: draft.detail,
+      });
+      patchClassInState(classId, {
+        code: updated.code, fam: updated.fam, mat: updated.mat, corr: updated.corr,
+        rating: updated.rating, design: updated.design, services: updated.services, detail: updated.detail,
+      });
+    },
+    markReviewed: async (classId, against) => {
+      const updated = await markReviewed(classId, against);
+      patchClassInState(classId, { reviewedBy: updated.reviewed_by, reviewedAt: updated.reviewed_at, reviewedAgainst: updated.reviewed_against });
+    },
+    clearReviewed: async (classId) => {
+      await clearReviewed(classId);
+      patchClassInState(classId, { reviewedBy: null, reviewedAt: null, reviewedAgainst: null });
+    },
+    resetStandard: async () => {
+      const seedSource = active.id === "lacal-pluspetrol" ? seedLaCalera() : seedClasses();
+      await resetPlantClasses(active.id, seedSource);
+      await reload();
+    },
+    newPlant: async (mode) => {
+      const id = uid();
+      const isDup = mode === "dup";
+      const convention = mode === "blank-freeform" ? FREEFORM_CODE_CONVENTION : EPF_CODE_CONVENTION;
+      const plant = await createPlant({
+        id,
+        name: isDup ? "EPF (copia) — editar" : "Nueva planta",
+        kind: isDup ? "Duplicado del estándar EPF" : "Plantilla en blanco",
+        ref: "—", code: "ASME B31.3",
+        codeConvention: convention,
+      });
+      if (isDup) await bulkInsertClasses(id, seedClasses());
+      await reload();
+      setActiveId(id);
+    },
+    renamePlant: async (id, name) => { await apiRenamePlant(id, name); setPlants((ps) => ps.map((p) => (p.id === id ? { ...p, name } : p))); },
+    deletePlant: async (id) => {
+      await apiDeletePlant(id);
+      const next = plants.filter((p) => p.id !== id);
+      setPlants(next);
+      if (activeId === id && next.length) setActiveId(next[0].id);
+    },
   };
 
   const fams = useMemo(() => {
+    if (!active) return {};
     const g = {};
     active.classes.forEach((k) => {
       if (onlyIncluded && !k.on) return;
@@ -788,15 +683,22 @@ export default function Generador() {
     });
     return g;
   }, [active, q, onlyIncluded]);
-  const includedCount = active.classes.filter((k) => k.on).length;
+  const includedCount = active ? active.classes.filter((k) => k.on).length : 0;
 
   if (!ready)
-    return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm">Cargando registro…</div>;
+    return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm gap-2 flex items-center"><Loader2 size={16} className="animate-spin" /> Cargando registro…</div>;
+  if (err)
+    return <div className="min-h-[60vh] flex items-center justify-center text-red-500 text-sm px-6 text-center">{err}</div>;
+  if (!active)
+    return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm">No hay plantas cargadas todavía.</div>;
+
+  const slots = active.codeConvention?.type === "segmented" ? active.codeConvention.slots : null;
 
   return (
     <div className="bg-slate-100 text-slate-900" style={{ fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}>
       <PlantBar plants={plants} activeId={activeId} setActiveId={setActiveId}
-        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant} />
+        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant}
+        userEmail={email} onSignOut={signOut} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6">
         <div className="space-y-5 order-2 lg:order-1">
@@ -807,7 +709,7 @@ export default function Generador() {
             </h2>
             <div className="flex items-center gap-2">
               <button onClick={handlers.addBlank} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#132A4C] text-white hover:bg-[#1F3F6E]"><Plus size={13} /> Agregar clase</button>
-              {active.seeded && <button onClick={handlers.resetStandard} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]" title="Volver a las 23 clases del documento"><RotateCcw size={13} /> Restaurar estándar</button>}
+              {active.seeded && <button onClick={handlers.resetStandard} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]" title="Volver a las clases del documento original"><RotateCcw size={13} /> Restaurar estándar</button>}
             </div>
           </div>
 
@@ -834,7 +736,7 @@ export default function Generador() {
               <div key={fam}>
                 <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">{FAMILIES[fam] || fam}</div>
                 <div className="grid sm:grid-cols-2 gap-3 mb-1">
-                  {list.map((k) => <RegisterCard key={k.code} item={k} onOpen={(it) => setOpenCode(it.code)} onToggle={handlers.toggle} onDuplicate={handlers.duplicate} onRemove={handlers.remove} />)}
+                  {list.map((k) => <RegisterCard key={k.id} item={k} onOpen={(it) => setOpenId(it.id)} onToggle={handlers.toggle} onDuplicate={handlers.duplicate} onRemove={handlers.remove} />)}
                 </div>
               </div>
             ))
@@ -845,15 +747,32 @@ export default function Generador() {
         </div>
 
         <div className="order-1 lg:order-2 space-y-4">
-          <CodeStamp sel={asm} setSel={setAsm} classes={active.classes} />
-          <Convention />
+          {slots ? (
+            <>
+              <CodeStamp sel={asm} setSel={setAsm} classes={active.classes} slots={slots} />
+              <Convention slots={slots} />
+            </>
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 text-[13px] text-slate-600 leading-relaxed">
+              <div className="flex items-center gap-2 text-[13px] font-medium text-slate-800 mb-1.5"><Info size={15} className="text-slate-400" /> Código propio por clase</div>
+              Este proyecto no usa una convención segmentada: cada clase tiene su propio código de documento (ej. B10A, A10R). El ensamblador de la izquierda no aplica acá — buscá por código directamente en el registro o con la barra de búsqueda.
+            </div>
+          )}
           <div className="text-[11px] text-slate-400 leading-relaxed px-1">
-            Los cambios se guardan en este navegador (localStorage). Otro equipo o modo incógnito no los ve — el próximo paso, cuando la lógica esté validada, es un backend compartido.
+            Los cambios se guardan en la base de datos compartida — los ve todo el equipo, al instante.
           </div>
         </div>
       </main>
 
-      {openItem && <DetailPanel item={openItem} onClose={() => setOpenCode(null)} onSave={handlers.saveClass} />}
+      {openItem && (
+        <DetailPanel
+          item={openItem}
+          onClose={() => setOpenId(null)}
+          onSave={handlers.saveClass}
+          onMarkReviewed={handlers.markReviewed}
+          onClearReviewed={handlers.clearReviewed}
+        />
+      )}
     </div>
   );
 }

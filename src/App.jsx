@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import Home from "./pages/Home";
 import Generador from "./pages/Generador";
 import SpecBuilder from "./pages/SpecBuilder";
+import AuthGate from "./components/AuthGate";
 import hytechLogo from "./assets/hytech-logo.png";
 
 const PAGE_TITLES = {
@@ -14,7 +15,8 @@ export default function App() {
   const [page, setPage] = useState("home");
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <AuthGate>
+      <div className="min-h-screen flex flex-col">
       <header className="print:hidden bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
           <button onClick={() => setPage("home")} className="flex items-center gap-2 shrink-0">
@@ -47,6 +49,7 @@ export default function App() {
           Hytech Tools · uso interno
         </div>
       </footer>
-    </div>
+      </div>
+    </AuthGate>
   );
 }

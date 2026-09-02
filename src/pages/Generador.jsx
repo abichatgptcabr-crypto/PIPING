@@ -2,29 +2,18 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Layers, ChevronDown, ChevronRight, X, Table2, CircleDot, GitBranch, StickyNote,
   Gauge, Search, Info, FileWarning, Plus, Pencil, Copy, Trash2, Building2, RotateCcw,
-  CheckSquare, Square, Check, Save,
+  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2,
 } from "lucide-react";
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   MOTOR DE NOMENCLATURA · A-B-C-D  ·  018-ABDC-00300-TI-C-0001 Rev.1 pág.3
-   ═══════════════════════════════════════════════════════════════════════════ */
 import {
-  NAMING, FAMILIES, COMP_COLS, VALVE_COLS, CLASSES, LACAL_CLASSES,
-  seedClasses, seedLaCalera, SEED_PLANTS, ratingLevel, clone, uid,
+  FAMILIES, COMP_COLS, VALVE_COLS, SEED_PLANTS, ratingLevel, clone, uid,
+  seedClasses, seedLaCalera, EPF_CODE_CONVENTION, FREEFORM_CODE_CONVENTION,
 } from "../data/plants";
-
-
-/* Persistencia en localStorage del navegador ─────────────────────────────── */
-const STORE_KEY = "pcgen:plants:v1";
-function storageLoad() {
-  try {
-    const raw = window.localStorage.getItem(STORE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) { return null; }
-}
-function storageSave(plants) {
-  try { window.localStorage.setItem(STORE_KEY, JSON.stringify(plants)); } catch (e) {}
-}
+import {
+  fetchAllPlants, ensureSeeded, insertClass, updateClassWithRevision, toggleClassIncluded,
+  deleteClass, markReviewed, clearReviewed, createPlant, renamePlant as apiRenamePlant,
+  deletePlant as apiDeletePlant, fetchRevisions, bulkInsertClasses, resetPlantClasses,
+} from "../lib/api";
+import { useAuth } from "../components/AuthGate";
 
 /* ═══════════════════════════════ UI ════════════════════════════════════ */
 function Gauge5({ level }) {
@@ -137,17 +126,68 @@ function BranchMatrix({ data }) {
 const TABS = [
   { id: "cond", label: "Condiciones", icon: Gauge }, { id: "comp", label: "Componentes", icon: Table2 },
   { id: "valv", label: "Válvulas", icon: CircleDot }, { id: "branch", label: "Ramificaciones", icon: GitBranch },
-  { id: "notes", label: "Notas", icon: StickyNote },
+  { id: "notes", label: "Notas", icon: StickyNote }, { id: "hist", label: "Historial", icon: History },
 ];
 const emptyDetail = () => ({ designT: [""], designP: [""], comps: [], valves: [], branch: { legend: [], sizes: [], m: {}, note: "" }, notes: [] });
 
-function DetailPanel({ item, onClose, onSave }) {
+function RevisionHistory({ classId }) {
+  const [revs, setRevs] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetchRevisions(classId).then((r) => { if (alive) setRevs(r); }).catch(() => setRevs([]));
+    return () => { alive = false; };
+  }, [classId]);
+  if (revs === null) return <div className="text-[13px] text-slate-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Cargando historial…</div>;
+  if (revs.length === 0) return <div className="text-[13px] text-slate-400">Todavía no hay ediciones guardadas para esta clase.</div>;
+  return (
+    <div className="space-y-2">
+      {revs.map((r) => (
+        <div key={r.id} className="border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <div className="flex items-center justify-between text-[12px]">
+            <span className="font-medium text-slate-800">{r.edited_by}</span>
+            <span className="text-slate-400 font-mono">{new Date(r.edited_at).toLocaleString("es-AR")}</span>
+          </div>
+          {r.note && <div className="text-[12px] text-slate-500 mt-0.5">{r.note}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReviewPanel({ item, onMark, onClear }) {
+  const [against, setAgainst] = useState(item.reviewedAgainst || "");
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3.5 flex items-start justify-between gap-3 flex-wrap">
+      <div className="min-w-0">
+        {item.reviewedBy ? (
+          <div className="text-[13px] text-slate-700">
+            <span className="text-emerald-700 font-medium flex items-center gap-1.5"><ShieldCheck size={14} /> Revisado por {item.reviewedBy}</span>
+            <div className="text-[12px] text-slate-500 mt-0.5">
+              {new Date(item.reviewedAt).toLocaleString("es-AR")}{item.reviewedAgainst ? ` · contra ${item.reviewedAgainst}` : ""}
+            </div>
+          </div>
+        ) : (
+          <div className="text-[13px] text-slate-500 flex items-center gap-1.5"><ShieldAlert size={14} className="text-amber-500" /> Todavía no fue marcada como revisada.</div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <input value={against} onChange={(e) => setAgainst(e.target.value)} placeholder="ej. ASME B31.3-2024"
+          className="text-[12px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none w-40" />
+        <button onClick={() => onMark(against)} className="text-[12px] px-2.5 py-1.5 rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E]">Marcar como revisado</button>
+        {item.reviewedBy && <button onClick={onClear} className="text-[12px] px-2.5 py-1.5 rounded-md text-slate-500 hover:bg-slate-100">Quitar</button>}
+      </div>
+    </div>
+  );
+}
+
+function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed }) {
   const [tab, setTab] = useState("cond");
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(null);
-  const originalCode = useRef(item.code);
+  const idRef = useRef(item.id);
 
-  useEffect(() => { originalCode.current = item.code; setEditing(false); setTab("cond"); }, [item]);
+  useEffect(() => { idRef.current = item.id; setEditing(false); setTab("cond"); }, [item]);
   useEffect(() => {
     if (editing) setDraft(clone({ ...item, detail: item.detail || emptyDetail() }));
   }, [editing, item]);
@@ -156,7 +196,11 @@ function DetailPanel({ item, onClose, onSave }) {
   const d = view.detail;
   const lvl = ratingLevel(view.rating);
   const setD = (patch) => setDraft((dr) => ({ ...dr, detail: { ...dr.detail, ...patch } }));
-  const save = () => { onSave(originalCode.current, draft); setEditing(false); };
+  const save = async () => {
+    setSaving(true);
+    try { await onSave(idRef.current, draft); setEditing(false); }
+    finally { setSaving(false); }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
@@ -191,7 +235,9 @@ function DetailPanel({ item, onClose, onSave }) {
           <div className="flex items-center gap-2 shrink-0">
             {editing ? (
               <>
-                <button onClick={save} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E]"><Save size={14} /> Guardar</button>
+                <button onClick={save} disabled={saving} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E] disabled:opacity-60">
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar
+                </button>
                 <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-[13px] rounded-md text-slate-500 hover:bg-slate-100">Cancelar</button>
               </>
             ) : (
@@ -200,6 +246,12 @@ function DetailPanel({ item, onClose, onSave }) {
             <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400"><X size={18} /></button>
           </div>
         </div>
+
+        {!editing && (
+          <div className="px-5 pt-3 bg-white">
+            <ReviewPanel item={item} onMark={(against) => onMarkReviewed(item.id, against)} onClear={() => onClearReviewed(item.id)} />
+          </div>
+        )}
 
         <div className="px-5 pt-3 bg-white border-b border-slate-200 flex gap-1 overflow-x-auto">
           {TABS.map((t) => {
@@ -214,7 +266,9 @@ function DetailPanel({ item, onClose, onSave }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {!d && !editing ? (
+          {tab === "hist" ? (
+            <RevisionHistory classId={item.id} />
+          ) : !d && !editing ? (
             <div className="flex flex-col items-center justify-center text-center py-16 text-slate-500">
               <FileWarning size={32} className="text-slate-300 mb-3" />
               <div className="text-sm font-medium text-slate-700 mb-1">Detalle todavía sin cargar</div>
@@ -325,34 +379,33 @@ function NotesEdit({ notes, onChange }) {
   );
 }
 
-function CodeStamp({ sel, setSel, classes }) {
-  const parts = ["A", "B", "C", "D"];
-  const assembled = parts.map((p) => sel[p] || "·").join("");
+function CodeStamp({ sel, setSel, classes, slots }) {
+  const assembled = slots.map((s) => sel[s.slot] || "·").join("");
   const match = classes.find((k) => k.code === assembled);
   return (
     <div className="rounded-xl bg-[#122542] text-slate-100 p-5">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8FAFD6] mb-4"><Layers size={13} /> Ensamblador de clase · A-B-C-D</div>
-      <div className="flex items-baseline justify-center gap-1 mb-4">
-        {parts.map((p) => (
-          <span key={p} className="flex flex-col items-center">
-            <span className={`font-mono text-4xl leading-none ${sel[p] ? "text-[#7FC4EE]" : "text-[#3C567F]"}`}>{sel[p] || "·"}</span>
-            <span className="mt-2 text-[10px] tracking-widest text-[#7291BB]">{p}</span>
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8FAFD6] mb-4"><Layers size={13} /> Ensamblador de clase</div>
+      <div className="flex items-baseline justify-center gap-1 mb-4 flex-wrap">
+        {slots.map((s) => (
+          <span key={s.slot} className="flex flex-col items-center">
+            <span className={`font-mono text-4xl leading-none ${sel[s.slot] ? "text-[#7FC4EE]" : "text-[#3C567F]"}`}>{sel[s.slot] || "·"}</span>
+            <span className="mt-2 text-[10px] tracking-widest text-[#7291BB]">{s.slot}</span>
           </span>
         ))}
       </div>
       <div className="text-center text-[13px] mb-4">
         {match ? <span className="text-emerald-300">Coincide con <span className="font-mono font-semibold">{match.code}</span></span>
-          : assembled !== "····" ? <span className="text-[#8FAFD6]">Sin clase en este registro</span>
+          : assembled !== "·".repeat(slots.length) ? <span className="text-[#8FAFD6]">Sin clase en este registro</span>
           : <span className="text-[#7291BB]">Ensamblá cada segmento</span>}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {parts.map((p) => (
-          <div key={p}>
-            <div className="text-[10px] uppercase tracking-wider text-[#7291BB] mb-1">{p} · {NAMING[p].label}</div>
-            <select value={sel[p] || ""} onChange={(e) => setSel({ ...sel, [p]: e.target.value })}
+        {slots.map((s) => (
+          <div key={s.slot}>
+            <div className="text-[10px] uppercase tracking-wider text-[#7291BB] mb-1">{s.slot} · {s.label}</div>
+            <select value={sel[s.slot] || ""} onChange={(e) => setSel({ ...sel, [s.slot]: e.target.value })}
               className="w-full bg-[#1D3A63] text-slate-100 text-[13px] rounded-md px-2 py-1.5 border border-[#2C4C7C] focus:border-[#3F72AC] focus:outline-none">
               <option value="">—</option>
-              {NAMING[p].rows.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.value}</option>)}
+              {s.rows.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.value}</option>)}
             </select>
           </div>
         ))}
@@ -360,21 +413,21 @@ function CodeStamp({ sel, setSel, classes }) {
     </div>
   );
 }
-function Convention() {
+function Convention({ slots }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 py-3 text-left">
-        <span className="flex items-center gap-2 text-sm font-medium text-slate-800"><Info size={15} className="text-slate-400" /> Convención A-B-C-D</span>
+        <span className="flex items-center gap-2 text-sm font-medium text-slate-800"><Info size={15} className="text-slate-400" /> Convención de códigos</span>
         {open ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
       </button>
       {open && (
         <div className="px-4 pb-4 space-y-3">
-          {Object.values(NAMING).map((t) => (
-            <div key={t.slot}>
-              <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1.5"><span className="font-mono font-semibold text-[#1F3F6E]">{t.slot}</span> · {t.label}</div>
+          {slots.map((s) => (
+            <div key={s.slot}>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1.5"><span className="font-mono font-semibold text-[#1F3F6E]">{s.slot}</span> · {s.label}</div>
               <div className="border border-slate-200 rounded-md overflow-hidden">
-                {t.rows.map((r, i) => (
+                {s.rows.map((r, i) => (
                   <div key={r.code} className={`flex text-[12px] ${i % 2 ? "bg-slate-50" : "bg-white"}`}>
                     <div className="w-10 shrink-0 font-mono font-semibold text-slate-700 px-2 py-1 border-r border-slate-100">{r.code}</div>
                     <div className="px-2 py-1 text-slate-600">{r.value}</div>
@@ -389,13 +442,23 @@ function Convention() {
   );
 }
 
+function ReviewBadge({ item }) {
+  if (!item.reviewedBy) return <span className="text-[10.5px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded flex items-center gap-1"><ShieldAlert size={11} /> sin revisar</span>;
+  const date = new Date(item.reviewedAt).toLocaleDateString("es-AR");
+  return (
+    <span className="text-[10.5px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1" title={`Revisado por ${item.reviewedBy} el ${date}${item.reviewedAgainst ? " contra " + item.reviewedAgainst : ""}`}>
+      <ShieldCheck size={11} /> revisado {date}
+    </span>
+  );
+}
+
 function RegisterCard({ item, onOpen, onToggle, onDuplicate, onRemove }) {
   const lvl = ratingLevel(item.rating);
   return (
     <div className={`group relative rounded-lg border bg-white transition p-3.5 ${item.on ? "border-slate-200 hover:border-[#7FC4EE] hover:shadow-sm" : "border-slate-100 opacity-60"}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <button onClick={() => onToggle(item.code)} title={item.on ? "Incluida en el proyecto" : "Excluida del proyecto"}>
+          <button onClick={() => onToggle(item)} title={item.on ? "Incluida en el proyecto" : "Excluida del proyecto"}>
             {item.on ? <CheckSquare size={16} className="text-[#2C568E]" /> : <Square size={16} className="text-slate-300" />}
           </button>
           <button onClick={() => onOpen(item)} className="font-mono text-lg font-bold text-slate-900 hover:text-[#1F3F6E]">{item.code}</button>
@@ -410,19 +473,22 @@ function RegisterCard({ item, onOpen, onToggle, onDuplicate, onRemove }) {
           <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">CA {item.corr}</span>
         </div>
       </button>
-      <div className="mt-2 flex items-center justify-between">
-        {item.detail ? <span className="text-[10.5px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">detalle completo</span>
-          : <span className="text-[10.5px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">sólo resumen</span>}
+      <div className="mt-2 flex items-center justify-between gap-1 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          {item.detail ? <span className="text-[10.5px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">detalle completo</span>
+            : <span className="text-[10.5px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">sólo resumen</span>}
+          <ReviewBadge item={item} />
+        </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-          <button onClick={() => onDuplicate(item.code)} title="Duplicar" className="p-1 text-slate-400 hover:text-slate-700"><Copy size={13} /></button>
-          <button onClick={() => onRemove(item.code)} title="Eliminar" className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
+          <button onClick={() => onDuplicate(item)} title="Duplicar" className="p-1 text-slate-400 hover:text-slate-700"><Copy size={13} /></button>
+          <button onClick={() => onRemove(item)} title="Eliminar" className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
         </div>
       </div>
     </div>
   );
 }
 
-function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) {
+function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete, userEmail, onSignOut }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const active = plants.find((p) => p.id === activeId);
@@ -445,20 +511,30 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) 
           <button onClick={() => setRenaming(true)} className="p-1.5 text-slate-400 hover:text-slate-700" title="Renombrar"><Pencil size={14} /></button>
         )}
         {plants.length > 1 && <button onClick={() => onDelete(activeId)} className="p-1.5 text-slate-400 hover:text-red-500" title="Eliminar tipo de planta"><Trash2 size={14} /></button>}
-        <div className="relative ml-auto">
-          <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Plus size={14} /> Nuevo tipo de planta</button>
-          {menu && (
-            <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-[13px]">
-              <button onClick={() => { onNew("dup"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
-                <div className="font-medium text-slate-800">Duplicar estándar EPF</div>
-                <div className="text-[11px] text-slate-500">Arranca con las 23 clases pre-cargadas para editar</div>
-              </button>
-              <button onClick={() => { onNew("blank"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
-                <div className="font-medium text-slate-800">Empezar en blanco</div>
-                <div className="text-[11px] text-slate-500">Registro vacío, cargás tus clases</div>
-              </button>
-            </div>
-          )}
+        <div className="relative ml-auto flex items-center gap-3">
+          <div className="relative">
+            <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Plus size={14} /> Nuevo tipo de planta</button>
+            {menu && (
+              <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-[13px]">
+                <button onClick={() => { onNew("dup"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                  <div className="font-medium text-slate-800">Duplicar estándar EPF</div>
+                  <div className="text-[11px] text-slate-500">Arranca con las clases de EPF pre-cargadas para editar</div>
+                </button>
+                <button onClick={() => { onNew("blank-abcd"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                  <div className="font-medium text-slate-800">En blanco · convención A-B-C-D</div>
+                  <div className="text-[11px] text-slate-500">Registro vacío, código segmentado tipo EPF</div>
+                </button>
+                <button onClick={() => { onNew("blank-freeform"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
+                  <div className="font-medium text-slate-800">En blanco · código propio</div>
+                  <div className="text-[11px] text-slate-500">Registro vacío, cada clase con su propio código (tipo La Calera)</div>
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-[12px] text-slate-500 border-l border-slate-200 pl-3">
+            <span className="truncate max-w-[140px]" title={userEmail}>{userEmail}</span>
+            <button onClick={onSignOut} title="Cerrar sesión" className="text-slate-400 hover:text-red-500"><LogOut size={14} /></button>
+          </div>
         </div>
       </div>
       {active && (
@@ -472,76 +548,132 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) 
 }
 
 export default function Generador() {
-  const [plants, setPlants] = useState(SEED_PLANTS);
-  const [activeId, setActiveId] = useState(SEED_PLANTS[0].id);
+  const { email, signOut } = useAuth();
+  const [plants, setPlants] = useState([]);
+  const [activeId, setActiveId] = useState(null);
   const [ready, setReady] = useState(false);
-  const [openCode, setOpenCode] = useState(null);
+  const [err, setErr] = useState("");
+  const [openId, setOpenId] = useState(null);
   const [asm, setAsm] = useState({});
   const [q, setQ] = useState("");
   const [onlyIncluded, setOnlyIncluded] = useState(false);
 
+  const reload = async () => {
+    const data = await fetchAllPlants();
+    setPlants(data);
+    setActiveId((cur) => (data.find((p) => p.id === cur) ? cur : data[0]?.id));
+  };
+
   useEffect(() => {
-    const saved = storageLoad();
-    if (saved && Array.isArray(saved) && saved.length) {
-      // Adjunto cualquier planta nueva del código (SEED_PLANTS) que el usuario
-      // todavía no tenga guardada, sin tocar lo que ya editó.
-      const savedIds = new Set(saved.map((p) => p.id));
-      const missing = SEED_PLANTS.filter((p) => !savedIds.has(p.id)).map((p) => clone(p));
-      const merged = missing.length ? [...saved, ...missing] : saved;
-      setPlants(merged);
-      if (!merged.find((p) => p.id === activeId)) setActiveId(merged[0].id);
-    }
-    setReady(true);
+    (async () => {
+      try {
+        await ensureSeeded(SEED_PLANTS);
+        await reload();
+      } catch (e) {
+        setErr(e.message || "No se pudo conectar con la base de datos.");
+      } finally {
+        setReady(true);
+      }
+    })();
   }, []);
-  useEffect(() => { if (ready) storageSave(plants); }, [plants, ready]);
 
   const active = plants.find((p) => p.id === activeId) || plants[0];
-  const setActiveClasses = (fn) =>
-    setPlants((ps) => ps.map((p) => (p.id !== activeId ? p : { ...p, classes: fn(p.classes) })));
+
+  // Actualiza una clase en el estado local sin recargar todo (evita parpadeos).
+  const patchClassInState = (classId, patch) =>
+    setPlants((ps) => ps.map((p) => ({
+      ...p,
+      classes: p.classes.map((k) => (k.id === classId ? { ...k, ...patch } : k)),
+    })));
+  const removeClassFromState = (classId) =>
+    setPlants((ps) => ps.map((p) => ({ ...p, classes: p.classes.filter((k) => k.id !== classId) })));
+  const addClassToState = (plantId, cls) =>
+    setPlants((ps) => ps.map((p) => (p.id !== plantId ? p : { ...p, classes: [cls, ...p.classes] })));
 
   const uniqueCode = (base, list) => {
     let code = base, i = 2;
     while (list.find((k) => k.code === code)) code = `${base}-${i++}`;
     return code;
   };
-  const openItem = active.classes.find((k) => k.code === openCode) || null;
+  const openItem = active?.classes.find((k) => k.id === openId) || null;
 
   const handlers = {
-    toggle: (code) => setActiveClasses((cs) => cs.map((k) => (k.code === code ? { ...k, on: !k.on } : k))),
-    remove: (code) => { setActiveClasses((cs) => cs.filter((k) => k.code !== code)); if (openCode === code) setOpenCode(null); },
-    duplicate: (code) => setActiveClasses((cs) => {
-      const src = cs.find((k) => k.code === code); if (!src) return cs;
-      const copy = clone({ ...src, code: uniqueCode(src.code, cs), fam: "custom", page: null });
-      const idx = cs.findIndex((k) => k.code === code);
-      return [...cs.slice(0, idx + 1), copy, ...cs.slice(idx + 1)];
-    }),
-    addBlank: () => setActiveClasses((cs) => [
-      { code: uniqueCode("NUEVA", cs), fam: "custom", mat: "—", corr: "—", rating: "150#", page: null, on: true, services: ["Servicio nuevo"], detail: null },
-      ...cs,
-    ]),
-    saveClass: (originalCode, nc) => setActiveClasses((cs) => cs.map((k) => (k.code === originalCode ? { ...nc, on: k.on } : k))),
-    resetStandard: () => setActiveClasses(() =>
-      activeId === "lacal-pluspetrol" ? seedLaCalera() : seedClasses()
-    ),
-    newPlant: (mode) => {
-      const np = {
-        id: uid(),
-        name: mode === "dup" ? "EPF (copia) — editar" : "Nueva planta",
-        kind: mode === "dup" ? "Duplicado del estándar EPF" : "Plantilla en blanco",
-        ref: "—", code: "ASME B31.3", seeded: false, naming: NAMING,
-        classes: mode === "dup" ? seedClasses() : [],
-      };
-      setPlants((ps) => [...ps, np]); setActiveId(np.id);
+    toggle: async (item) => {
+      patchClassInState(item.id, { on: !item.on });
+      try { await toggleClassIncluded(item.id, !item.on); } catch (e) { patchClassInState(item.id, { on: item.on }); }
     },
-    renamePlant: (id, name) => setPlants((ps) => ps.map((p) => (p.id === id ? { ...p, name } : p))),
-    deletePlant: (id) => setPlants((ps) => {
-      const next = ps.filter((p) => p.id !== id);
-      if (id === activeId && next.length) setActiveId(next[0].id);
-      return next.length ? next : ps;
-    }),
+    remove: async (item) => {
+      if (openId === item.id) setOpenId(null);
+      removeClassFromState(item.id);
+      try { await deleteClass(item.id); } catch (e) { await reload(); }
+    },
+    duplicate: async (item) => {
+      const code = uniqueCode(item.code, active.classes);
+      const created = await insertClass(active.id, { ...item, code, fam: "custom", page: null });
+      addClassToState(active.id, {
+        id: created.id, code: created.code, fam: created.fam, mat: created.mat, corr: created.corr,
+        rating: created.rating, design: created.design, services: created.services, page: created.page,
+        on: true, detail: created.detail, reviewedBy: null, reviewedAt: null, reviewedAgainst: null,
+      });
+    },
+    addBlank: async () => {
+      const code = uniqueCode("NUEVA", active.classes);
+      const created = await insertClass(active.id, { code, fam: "custom", mat: "—", corr: "—", rating: "150#", services: ["Servicio nuevo"] });
+      addClassToState(active.id, {
+        id: created.id, code: created.code, fam: created.fam, mat: created.mat, corr: created.corr,
+        rating: created.rating, design: created.design, services: created.services, page: created.page,
+        on: true, detail: null, reviewedBy: null, reviewedAt: null, reviewedAgainst: null,
+      });
+    },
+    saveClass: async (classId, draft) => {
+      const updated = await updateClassWithRevision(classId, {
+        code: draft.code, fam: draft.fam, mat: draft.mat, corr: draft.corr,
+        rating: draft.rating, design: draft.design, services: draft.services, detail: draft.detail,
+      });
+      patchClassInState(classId, {
+        code: updated.code, fam: updated.fam, mat: updated.mat, corr: updated.corr,
+        rating: updated.rating, design: updated.design, services: updated.services, detail: updated.detail,
+      });
+    },
+    markReviewed: async (classId, against) => {
+      const updated = await markReviewed(classId, against);
+      patchClassInState(classId, { reviewedBy: updated.reviewed_by, reviewedAt: updated.reviewed_at, reviewedAgainst: updated.reviewed_against });
+    },
+    clearReviewed: async (classId) => {
+      await clearReviewed(classId);
+      patchClassInState(classId, { reviewedBy: null, reviewedAt: null, reviewedAgainst: null });
+    },
+    resetStandard: async () => {
+      const seedSource = active.id === "lacal-pluspetrol" ? seedLaCalera() : seedClasses();
+      await resetPlantClasses(active.id, seedSource);
+      await reload();
+    },
+    newPlant: async (mode) => {
+      const id = uid();
+      const isDup = mode === "dup";
+      const convention = mode === "blank-freeform" ? FREEFORM_CODE_CONVENTION : EPF_CODE_CONVENTION;
+      const plant = await createPlant({
+        id,
+        name: isDup ? "EPF (copia) — editar" : "Nueva planta",
+        kind: isDup ? "Duplicado del estándar EPF" : "Plantilla en blanco",
+        ref: "—", code: "ASME B31.3",
+        codeConvention: convention,
+      });
+      if (isDup) await bulkInsertClasses(id, seedClasses());
+      await reload();
+      setActiveId(id);
+    },
+    renamePlant: async (id, name) => { await apiRenamePlant(id, name); setPlants((ps) => ps.map((p) => (p.id === id ? { ...p, name } : p))); },
+    deletePlant: async (id) => {
+      await apiDeletePlant(id);
+      const next = plants.filter((p) => p.id !== id);
+      setPlants(next);
+      if (activeId === id && next.length) setActiveId(next[0].id);
+    },
   };
 
   const fams = useMemo(() => {
+    if (!active) return {};
     const g = {};
     active.classes.forEach((k) => {
       if (onlyIncluded && !k.on) return;
@@ -551,15 +683,22 @@ export default function Generador() {
     });
     return g;
   }, [active, q, onlyIncluded]);
-  const includedCount = active.classes.filter((k) => k.on).length;
+  const includedCount = active ? active.classes.filter((k) => k.on).length : 0;
 
   if (!ready)
-    return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm">Cargando registro…</div>;
+    return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm gap-2 flex items-center"><Loader2 size={16} className="animate-spin" /> Cargando registro…</div>;
+  if (err)
+    return <div className="min-h-[60vh] flex items-center justify-center text-red-500 text-sm px-6 text-center">{err}</div>;
+  if (!active)
+    return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm">No hay plantas cargadas todavía.</div>;
+
+  const slots = active.codeConvention?.type === "segmented" ? active.codeConvention.slots : null;
 
   return (
     <div className="bg-slate-100 text-slate-900" style={{ fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}>
       <PlantBar plants={plants} activeId={activeId} setActiveId={setActiveId}
-        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant} />
+        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant}
+        userEmail={email} onSignOut={signOut} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6">
         <div className="space-y-5 order-2 lg:order-1">
@@ -597,7 +736,7 @@ export default function Generador() {
               <div key={fam}>
                 <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">{FAMILIES[fam] || fam}</div>
                 <div className="grid sm:grid-cols-2 gap-3 mb-1">
-                  {list.map((k) => <RegisterCard key={k.code} item={k} onOpen={(it) => setOpenCode(it.code)} onToggle={handlers.toggle} onDuplicate={handlers.duplicate} onRemove={handlers.remove} />)}
+                  {list.map((k) => <RegisterCard key={k.id} item={k} onOpen={(it) => setOpenId(it.id)} onToggle={handlers.toggle} onDuplicate={handlers.duplicate} onRemove={handlers.remove} />)}
                 </div>
               </div>
             ))
@@ -608,24 +747,32 @@ export default function Generador() {
         </div>
 
         <div className="order-1 lg:order-2 space-y-4">
-          {active.codeConvention === "abcd" ? (
+          {slots ? (
             <>
-              <CodeStamp sel={asm} setSel={setAsm} classes={active.classes} />
-              <Convention />
+              <CodeStamp sel={asm} setSel={setAsm} classes={active.classes} slots={slots} />
+              <Convention slots={slots} />
             </>
           ) : (
             <div className="rounded-xl border border-slate-200 bg-white p-4 text-[13px] text-slate-600 leading-relaxed">
               <div className="flex items-center gap-2 text-[13px] font-medium text-slate-800 mb-1.5"><Info size={15} className="text-slate-400" /> Código propio por clase</div>
-              Este proyecto no usa la convención segmentada A-B-C-D: cada clase tiene su propio código de documento (ej. B10A, A10R). El ensamblador de la izquierda no aplica acá — buscá por código directamente en el registro o con la barra de búsqueda.
+              Este proyecto no usa una convención segmentada: cada clase tiene su propio código de documento (ej. B10A, A10R). El ensamblador de la izquierda no aplica acá — buscá por código directamente en el registro o con la barra de búsqueda.
             </div>
           )}
           <div className="text-[11px] text-slate-400 leading-relaxed px-1">
-            Los cambios se guardan en este navegador (localStorage). Otro equipo o modo incógnito no los ve — el próximo paso, cuando la lógica esté validada, es un backend compartido.
+            Los cambios se guardan en la base de datos compartida — los ve todo el equipo, al instante.
           </div>
         </div>
       </main>
 
-      {openItem && <DetailPanel item={openItem} onClose={() => setOpenCode(null)} onSave={handlers.saveClass} />}
+      {openItem && (
+        <DetailPanel
+          item={openItem}
+          onClose={() => setOpenId(null)}
+          onSave={handlers.saveClass}
+          onMarkReviewed={handlers.markReviewed}
+          onClearReviewed={handlers.clearReviewed}
+        />
+      )}
     </div>
   );
 }
