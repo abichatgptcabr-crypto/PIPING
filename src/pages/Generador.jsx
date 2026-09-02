@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Layers, ChevronDown, ChevronRight, X, Table2, CircleDot, GitBranch, StickyNote,
   Gauge, Search, Info, FileWarning, Plus, Pencil, Copy, Trash2, Building2, RotateCcw,
-  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2, Filter,
+  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2, Filter, FileStack,
 } from "lucide-react";
 import {
   FAMILIES, COMP_COLS, VALVE_COLS, SEED_PLANTS, ratingLevel, clone, uid,
@@ -12,6 +12,7 @@ import {
   fetchAllPlants, syncFromSeed, insertClass, updateClassWithRevision, toggleClassIncluded,
   deleteClass, markReviewed, clearReviewed, createPlant, renamePlant as apiRenamePlant,
   deletePlant as apiDeletePlant, fetchRevisions, bulkInsertClasses, resetPlantClasses,
+  fetchSpecsForClass,
 } from "../lib/api";
 import { useAuth } from "../components/AuthGate";
 
@@ -127,6 +128,7 @@ const TABS = [
   { id: "cond", label: "Condiciones", icon: Gauge }, { id: "comp", label: "Componentes", icon: Table2 },
   { id: "valv", label: "Válvulas", icon: CircleDot }, { id: "branch", label: "Ramificaciones", icon: GitBranch },
   { id: "notes", label: "Notas", icon: StickyNote }, { id: "hist", label: "Historial", icon: History },
+  { id: "specs", label: "Specs", icon: FileStack },
 ];
 const emptyDetail = () => ({ designT: [""], designP: [""], comps: [], valves: [], branch: { legend: [], sizes: [], m: {}, note: "" }, notes: [] });
 
@@ -148,6 +150,28 @@ function RevisionHistory({ classId }) {
             <span className="text-slate-400 font-mono">{new Date(r.edited_at).toLocaleString("es-AR")}</span>
           </div>
           {r.note && <div className="text-[12px] text-slate-500 mt-0.5">{r.note}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SpecTraceability({ classId }) {
+  const [specs, setSpecs] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetchSpecsForClass(classId).then((s) => { if (alive) setSpecs(s); }).catch(() => setSpecs([]));
+    return () => { alive = false; };
+  }, [classId]);
+  if (specs === null) return <div className="text-[13px] text-slate-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Cargando…</div>;
+  if (specs.length === 0) return <div className="text-[13px] text-slate-400">Esta clase todavía no se usó en ninguna especificación guardada (ver "Armar especificación").</div>;
+  return (
+    <div className="space-y-2">
+      {specs.map((s) => (
+        <div key={s.id} className="border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <div className="text-[13px] font-medium text-slate-800">{s.project || "sin proyecto"}{s.doc_number ? ` · ${s.doc_number}` : ""}</div>
+          <div className="text-[12px] text-slate-500">{s.title} · Rev. {s.revision}{s.client ? ` · para ${s.client}` : ""}</div>
+          <div className="text-[11px] text-slate-400 font-mono mt-0.5">{new Date(s.created_at).toLocaleString("es-AR")} · {s.created_by}</div>
         </div>
       ))}
     </div>
@@ -268,6 +292,8 @@ function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed })
         <div className="flex-1 overflow-y-auto p-5">
           {tab === "hist" ? (
             <RevisionHistory classId={item.id} />
+          ) : tab === "specs" ? (
+            <SpecTraceability classId={item.id} />
           ) : !d && !editing ? (
             <div className="flex flex-col items-center justify-center text-center py-16 text-slate-500">
               <FileWarning size={32} className="text-slate-300 mb-3" />
