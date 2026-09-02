@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Layers, ChevronDown, ChevronRight, X, Table2, CircleDot, GitBranch, StickyNote,
   Gauge, Search, Info, FileWarning, Plus, Pencil, Copy, Trash2, Building2, RotateCcw,
-  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2, Filter, FileStack,
+  CheckSquare, Square, Check, Save, ShieldCheck, ShieldAlert, History, LogOut, Loader2, Filter, FileStack, GitCompare,
 } from "lucide-react";
 import {
   FAMILIES, COMP_COLS, VALVE_COLS, SEED_PLANTS, ratingLevel, clone, uid,
@@ -607,6 +607,193 @@ function TriToggle({ label, value, onChange, options }) {
   );
 }
 
+const CMP_TABS = [
+  { id: "cond", label: "Condiciones", icon: Gauge }, { id: "comp", label: "Componentes", icon: Table2 },
+  { id: "valv", label: "Válvulas", icon: CircleDot }, { id: "branch", label: "Ramificaciones", icon: GitBranch },
+  { id: "notes", label: "Notas", icon: StickyNote },
+];
+const rowKey = (row) => row.join("␟");
+
+function FieldDiffRow({ label, a, b }) {
+  const same = (a || "") === (b || "");
+  return (
+    <tr className={!same ? "bg-amber-50" : ""}>
+      <td className="px-2.5 py-2 text-[11px] text-slate-500 font-medium align-top w-32 shrink-0">{label}</td>
+      <td className="px-2.5 py-2 text-[12.5px] text-slate-800 align-top">{a || "—"}</td>
+      <td className="px-2.5 py-2 text-[12.5px] text-slate-800 align-top">{b || "—"}</td>
+    </tr>
+  );
+}
+
+function DiffTable({ cols, rowsA, rowsB, labelA, labelB }) {
+  const bKeys = new Set(rowsB.map(rowKey));
+  const aKeys = new Set(rowsA.map(rowKey));
+  const Side = ({ label, rows, otherKeys }) => (
+    <div>
+      <div className="text-[11px] font-mono font-semibold text-slate-600 mb-1.5">{label}</div>
+      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+        <table className="w-full text-[10px] font-mono border-collapse">
+          <thead><tr>{cols.map((h) => <th key={h} className="text-left font-semibold px-1.5 py-1 bg-slate-100 border-b border-slate-200 whitespace-nowrap">{h}</th>)}</tr></thead>
+          <tbody>
+            {rows.length === 0 && <tr><td colSpan={cols.length} className="px-2 py-3 text-slate-400">Sin filas.</td></tr>}
+            {rows.map((r, i) => (
+              <tr key={i} className={!otherKeys.has(rowKey(r)) ? "bg-amber-50" : ""}>
+                {r.map((cell, j) => <td key={j} className="px-1.5 py-1 align-top whitespace-nowrap border-t border-slate-100">{cell}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+  return (
+    <div className="space-y-3">
+      <div className="text-[11px] text-slate-400 flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-50 border border-amber-200 inline-block" /> Fila sin equivalente exacto del otro lado</div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <Side label={labelA} rows={rowsA} otherKeys={bKeys} />
+        <Side label={labelB} rows={rowsB} otherKeys={aKeys} />
+      </div>
+    </div>
+  );
+}
+
+function NoDetailNote({ item }) {
+  return <div className="text-[12.5px] text-slate-400 flex items-center gap-1.5"><FileWarning size={13} /> {item.code}: sin detalle cargado (sólo resumen).</div>;
+}
+
+function CompareView({ plants, onClose }) {
+  const [aPlantId, setAPlantId] = useState(plants[0]?.id || "");
+  const [aCode, setACode] = useState("");
+  const [bPlantId, setBPlantId] = useState(plants[0]?.id || "");
+  const [bCode, setBCode] = useState("");
+  const [tab, setTab] = useState("cond");
+
+  const aPlant = plants.find((p) => p.id === aPlantId);
+  const bPlant = plants.find((p) => p.id === bPlantId);
+  const a = aPlant?.classes.find((k) => k.code === aCode);
+  const b = bPlant?.classes.find((k) => k.code === bCode);
+
+  const selStyle = "text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none bg-white flex-1 min-w-0";
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
+      <div className="w-full max-w-5xl h-full bg-slate-50 shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[15px] font-semibold text-slate-800"><GitCompare size={18} /> Comparar clases</div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400"><X size={18} /></button>
+        </div>
+
+        <div className="px-5 py-3 bg-white border-b border-slate-200 grid sm:grid-cols-2 gap-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Clase A</div>
+            <div className="flex gap-2">
+              <select value={aPlantId} onChange={(e) => { setAPlantId(e.target.value); setACode(""); }} className={selStyle}>
+                {plants.map((p) => <option key={p.id} value={p.id}>{p.name.split(" · ")[0]}</option>)}
+              </select>
+              <select value={aCode} onChange={(e) => setACode(e.target.value)} className={selStyle}>
+                <option value="">Elegí clase…</option>
+                {aPlant?.classes.map((k) => <option key={k.id} value={k.code}>{k.code}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Clase B</div>
+            <div className="flex gap-2">
+              <select value={bPlantId} onChange={(e) => { setBPlantId(e.target.value); setBCode(""); }} className={selStyle}>
+                {plants.map((p) => <option key={p.id} value={p.id}>{p.name.split(" · ")[0]}</option>)}
+              </select>
+              <select value={bCode} onChange={(e) => setBCode(e.target.value)} className={selStyle}>
+                <option value="">Elegí clase…</option>
+                {bPlant?.classes.map((k) => <option key={k.id} value={k.code}>{k.code}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {!a || !b ? (
+          <div className="flex-1 flex items-center justify-center text-slate-400 text-[13px]">Elegí una clase en cada lado para comparar.</div>
+        ) : (
+          <>
+            <div className="px-5 pt-3 bg-white border-b border-slate-200 flex gap-1 overflow-x-auto">
+              {CMP_TABS.map((t) => {
+                const Icon = t.icon; const active = tab === t.id;
+                return (
+                  <button key={t.id} onClick={() => setTab(t.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-t-md whitespace-nowrap border-b-2 ${active ? "border-[#2C568E] text-slate-900 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+                    <Icon size={14} /> {t.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {tab === "cond" && (
+                <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
+                  <table className="w-full">
+                    <thead><tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200">
+                      <th className="px-2.5 py-2 text-left"></th>
+                      <th className="px-2.5 py-2 text-left font-mono text-[12px] text-slate-700">{a.code} <span className="font-normal text-slate-400">· {aPlant.name.split(" · ")[0]}</span></th>
+                      <th className="px-2.5 py-2 text-left font-mono text-[12px] text-slate-700">{b.code} <span className="font-normal text-slate-400">· {bPlant.name.split(" · ")[0]}</span></th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                      <FieldDiffRow label="Material" a={a.mat} b={b.mat} />
+                      <FieldDiffRow label="Corrosión" a={a.corr} b={b.corr} />
+                      <FieldDiffRow label="Rating" a={a.rating} b={b.rating} />
+                      <FieldDiffRow label="Diseño" a={a.design} b={b.design} />
+                      <FieldDiffRow label="Servicios" a={a.services.join(" / ")} b={b.services.join(" / ")} />
+                      <FieldDiffRow label="Familia" a={FAMILIES[a.fam] || a.fam} b={FAMILIES[b.fam] || b.fam} />
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {tab === "comp" && (
+                a.detail && b.detail
+                  ? <DiffTable cols={COMP_COLS} rowsA={a.detail.comps} rowsB={b.detail.comps} labelA={a.code} labelB={b.code} />
+                  : <div className="space-y-1.5">{!a.detail && <NoDetailNote item={a} />}{!b.detail && <NoDetailNote item={b} />}</div>
+              )}
+              {tab === "valv" && (
+                a.detail && b.detail
+                  ? <DiffTable cols={VALVE_COLS} rowsA={a.detail.valves} rowsB={b.detail.valves} labelA={a.code} labelB={b.code} />
+                  : <div className="space-y-1.5">{!a.detail && <NoDetailNote item={a} />}{!b.detail && <NoDetailNote item={b} />}</div>
+              )}
+              {tab === "branch" && (
+                a.detail && b.detail ? (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div><div className="text-[11px] font-mono font-semibold text-slate-600 mb-1.5">{a.code}</div><BranchMatrix data={a.detail.branch} /></div>
+                    <div><div className="text-[11px] font-mono font-semibold text-slate-600 mb-1.5">{b.code}</div><BranchMatrix data={b.detail.branch} /></div>
+                  </div>
+                ) : <div className="space-y-1.5">{!a.detail && <NoDetailNote item={a} />}{!b.detail && <NoDetailNote item={b} />}</div>
+              )}
+              {tab === "notes" && (
+                a.detail && b.detail ? (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {[[a, b], [b, a]].map(([self, other], idx) => {
+                      const otherSet = new Set(other.detail.notes);
+                      return (
+                        <div key={idx}>
+                          <div className="text-[11px] font-mono font-semibold text-slate-600 mb-1.5">{self.code}</div>
+                          {self.detail.notes.length === 0 ? <div className="text-[12.5px] text-slate-400">Sin notas.</div> : (
+                            <ol className="space-y-1.5">
+                              {self.detail.notes.map((n, i) => (
+                                <li key={i} className={`flex gap-2 text-[12.5px] px-2 py-1 rounded ${!otherSet.has(n) ? "bg-amber-50" : ""}`}>
+                                  <span className="font-mono text-slate-400 shrink-0">{i + 1}.</span><span className="text-slate-700">{n}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : <div className="space-y-1.5">{!a.detail && <NoDetailNote item={a} />}{!b.detail && <NoDetailNote item={b} />}</div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Generador() {
   const { email, signOut } = useAuth();
   const [plants, setPlants] = useState([]);
@@ -614,6 +801,7 @@ export default function Generador() {
   const [ready, setReady] = useState(false);
   const [err, setErr] = useState("");
   const [openId, setOpenId] = useState(null);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [asm, setAsm] = useState({});
   const [q, setQ] = useState("");
   const [onlyIncluded, setOnlyIncluded] = useState(false);
@@ -803,6 +991,7 @@ export default function Generador() {
             </h2>
             <div className="flex items-center gap-2">
               <button onClick={handlers.addBlank} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#132A4C] text-white hover:bg-[#1F3F6E]"><Plus size={13} /> Agregar clase</button>
+              <button onClick={() => setCompareOpen(true)} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]"><GitCompare size={13} /> Comparar clases</button>
               {active.seeded && <button onClick={handlers.resetStandard} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]" title="Volver a las clases del documento original"><RotateCcw size={13} /> Restaurar estándar</button>}
             </div>
           </div>
@@ -893,6 +1082,7 @@ export default function Generador() {
           onClearReviewed={handlers.clearReviewed}
         />
       )}
+      {compareOpen && <CompareView plants={plants} onClose={() => setCompareOpen(false)} />}
     </div>
   );
 }
