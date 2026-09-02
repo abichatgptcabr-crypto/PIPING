@@ -1,10 +1,12 @@
-import React, { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Home from "./pages/Home";
 import Generador from "./pages/Generador";
 import SpecBuilder from "./pages/SpecBuilder";
 import AuthGate from "./components/AuthGate";
 import hytechLogo from "./assets/hytech-logo.png";
+import { SEED_PLANTS } from "./data/plants";
+import { syncFromSeed } from "./lib/api";
 
 const PAGE_TITLES = {
   generador: "Generador de piping class",
@@ -13,6 +15,18 @@ const PAGE_TITLES = {
 
 export default function App() {
   const [page, setPage] = useState("home");
+  const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState("");
+
+  // Trae la base al día con lo que hay en el código — agrega plantas/clases
+  // nuevas y completa el detalle de clases que quedaron en "sólo resumen"
+  // en cargas anteriores. Corre en cada visita, no sólo la primera vez, y
+  // nunca pisa una clase que el usuario ya editó a mano.
+  useEffect(() => {
+    syncFromSeed(SEED_PLANTS)
+      .then(() => setDbReady(true))
+      .catch((e) => { setDbError(e.message || "No se pudo conectar con la base de datos."); setDbReady(true); });
+  }, []);
 
   return (
     <AuthGate>
@@ -39,9 +53,19 @@ export default function App() {
       </header>
 
       <main className="flex-1">
-        {page === "home" && <Home onOpen={setPage} />}
-        {page === "generador" && <Generador />}
-        {page === "spec-builder" && <SpecBuilder />}
+        {!dbReady ? (
+          <div className="min-h-[70vh] flex items-center justify-center text-slate-400 text-sm gap-2">
+            <Loader2 size={16} className="animate-spin" /> Conectando con la base de datos…
+          </div>
+        ) : dbError ? (
+          <div className="min-h-[70vh] flex items-center justify-center text-red-500 text-sm px-6 text-center">{dbError}</div>
+        ) : (
+          <>
+            {page === "home" && <Home onOpen={setPage} />}
+            {page === "generador" && <Generador />}
+            {page === "spec-builder" && <SpecBuilder />}
+          </>
+        )}
       </main>
 
       <footer className="print:hidden border-t border-slate-200 bg-white">
