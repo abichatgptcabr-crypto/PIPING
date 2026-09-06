@@ -290,6 +290,12 @@ export async function fetchSpecs() {
   return data;
 }
 
+export async function fetchSpecById(id) {
+  const { data, error } = await supabase.from("specs").select("*").eq("id", id).single();
+  if (error) throw error;
+  return data;
+}
+
 export async function saveSpec(meta, classIds) {
   const createdBy = await getCurrentUserEmail();
   const { data: spec, error } = await supabase
@@ -298,6 +304,7 @@ export async function saveSpec(meta, classIds) {
       title: meta.title, project: meta.project, client: meta.client,
       doc_number: meta.docNumber, revision: meta.revision, company: meta.company,
       confidential: meta.confidential, date: meta.date, created_by: createdBy,
+      service_coding: meta.serviceCoding,
     })
     .select()
     .single();
@@ -319,6 +326,78 @@ export async function fetchSpecItems(specId) {
     .order("position", { ascending: true });
   if (error) throw error;
   return data.map((row) => row.classes);
+}
+
+/* ═══════════════════════════ Catálogo de servicios ═════════════════════ */
+// Clasificación automática por palabras clave — de punto de partida. El
+// usuario puede corregir la categoría de cada servicio a mano después;
+// syncServiceCatalog nunca pisa una categoría ya guardada.
+function classifyService(text) {
+  const t = text.toLowerCase();
+  if (/agua|water/.test(t)) return "Agua";
+  if (/incendio|fire/.test(t)) return "Contra incendio";
+  if (/venteo|\bvent\b|flare|antorcha/.test(t)) return "Venteos y antorcha";
+  if (/hidrocarb|hydrocarbon|crudo|condens/.test(t)) return "Hidrocarburos";
+  if (/gas|combustible|\bfuel\b|nitrogen|glycol|\bair\b/.test(t)) return "Gas y utilitarios";
+  return "Otros";
+}
+
+// Recorre todas las clases de todas las plantas y agrega al catálogo los
+// servicios que todavía no estén — no pisa nombre/categoría/descripción de
+// los que ya existen. Se puede llamar seguido, es idempotente.
+export async function syncServiceCatalog(plants) {
+  const seen = new Set();
+  const names = [];
+  plants.forEach((p) => p.classes.forEach((k) => {
+    (k.services || []).forEach((s) => {
+      const clean = (s || "").trim();
+      if (!clean || clean.startsWith("(") || seen.has(clean)) return;
+      seen.add(clean);
+      names.push(clean);
+    });
+  }));
+  if (names.length === 0) return 0;
+
+  const { data: existing, error } = await supabase.from("services").select("name");
+  if (error) throw error;
+  const existingNames = new Set((existing || []).map((r) => r.name));
+  const toInsert = names.filter((n) => !existingNames.has(n)).map((n) => ({ name: n, category: classifyService(n) }));
+  if (toInsert.length) {
+    const { error: insErr } = await supabase.from("services").insert(toInsert);
+    if (insErr) throw insErr;
+  }
+  return toInsert.length;
+}
+
+export async function fetchServiceCatalog() {
+  const { data, error } = await supabase.from("services").select("*").order("name");
+  if (error) throw error;
+  return data;
+}
+
+export async function updateService(id, patch) {
+  const { data, error } = await supabase.from("services").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Códigos estables: mismo servicio → mismo código en cualquier documento,
+// siempre que el catálogo completo esté disponible (se recalculan a partir
+// del catálogo entero, ordenado, no se guardan en la base).
+const CATEGORY_PREFIX = {
+  "Agua": "AGU", "Contra incendio": "INC", "Venteos y antorcha": "VEN",
+  "Hidrocarburos": "HID", "Gas y utilitarios": "GAS", "Otros": "OTR",
+};
+export function computeServiceCodes(catalog) {
+  const byCat = {};
+  catalog.forEach((s) => (byCat[s.category] ||= []).push(s));
+  const codes = new Map();
+  Object.entries(byCat).forEach(([cat, list]) => {
+    const prefix = CATEGORY_PREFIX[cat] || cat.slice(0, 3).toUpperCase();
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    list.forEach((s, i) => codes.set(s.name, `${prefix}-${String(i + 1).padStart(2, "0")}`));
+  });
+  return codes;
 }
 
 // Trazabilidad: en qué specs guardadas se usó esta clase (para el tab
