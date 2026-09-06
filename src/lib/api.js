@@ -313,7 +313,7 @@ export async function saveSpec(meta, selectedEntries) {
       prepared_by: meta.preparedBy, prepared_date: meta.preparedDate,
       checked_by: meta.checkedBy, checked_date: meta.checkedDate,
       approved_by: meta.approvedBy, approved_date: meta.approvedDate,
-      client_logo_url: meta.clientLogoUrl,
+      client_logo_url: meta.clientLogoUrl, change_note: meta.changeNote,
     })
     .select()
     .single();
@@ -327,6 +327,19 @@ export async function saveSpec(meta, selectedEntries) {
     if (itemsErr) throw itemsErr;
   }
   return spec;
+}
+
+// Historial de revisiones de un mismo documento (mismo N°), para la tabla
+// de control de cambios en la portada del PDF.
+export async function fetchRevisionHistory(docNumber) {
+  if (!docNumber || !docNumber.trim()) return [];
+  const { data, error } = await supabase
+    .from("specs")
+    .select("revision, date, change_note, prepared_by, approved_by, created_at")
+    .eq("doc_number", docNumber.trim())
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
 }
 
 // Devuelve el borrador guardado de una spec: usa la foto congelada
@@ -497,4 +510,27 @@ export async function uploadClientLogo(file) {
   if (error) throw error;
   const { data } = supabase.storage.from("logos").getPublicUrl(path);
   return data.publicUrl;
+}
+
+/* ═══════════════════════ Perfiles de cliente ═══════════════════════════ */
+export async function saveClientProfile(name, logoUrl) {
+  const createdBy = await getCurrentUserEmail();
+  const { data, error } = await supabase
+    .from("client_profiles")
+    .insert({ name, logo_url: logoUrl, created_by: createdBy })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchClientProfiles() {
+  const { data, error } = await supabase.from("client_profiles").select("*").order("name", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteClientProfile(id) {
+  const { error } = await supabase.from("client_profiles").delete().eq("id", id);
+  if (error) throw error;
 }
