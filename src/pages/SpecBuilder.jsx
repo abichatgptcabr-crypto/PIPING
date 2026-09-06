@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  FileStack, Search, X, Printer, ArrowLeft, Building2, ShieldCheck,
+  FileStack, Search, X, Printer, ArrowLeft, Building2, ShieldCheck, ShieldAlert,
   CheckSquare, Square, MinusSquare, FileWarning, Loader2, Save, FolderOpen, Trash2,
   FileSpreadsheet, Link2, Check,
 } from "lucide-react";
 import { FAMILIES, COMP_COLS, VALVE_COLS } from "../data/plants";
-import { fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, fetchSpecById, deleteSpec, fetchServiceCatalog, computeServiceCodes } from "../lib/api";
+import { fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, fetchSpecById, deleteSpec, fetchServiceCatalog, computeServiceCodes, markReviewed, clearReviewed } from "../lib/api";
 import * as XLSX from "xlsx";
 
 /* ═══════════════════════════ Selector cross-planta ═══════════════════════ */
@@ -61,6 +61,7 @@ function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
                           <span className="font-mono font-semibold text-slate-800">{k.code}</span>
                           <span className="text-slate-500"> · {k.rating} · {k.mat}</span>
                           {!k.detail && <span className="ml-1 text-[10px] text-slate-400">(sólo resumen)</span>}
+                          {k.reviewedBy ? <ShieldCheck size={11} className="inline ml-1 -mt-0.5 text-emerald-600" /> : <ShieldAlert size={11} className="inline ml-1 -mt-0.5 text-slate-300" />}
                         </span>
                       </button>
                     );
@@ -136,8 +137,8 @@ export function Watermark() {
       style={{ zIndex: 0 }}
     >
       <span
-        className="text-[64px] font-bold uppercase text-black/10"
-        style={{ transform: "rotate(-32deg)", whiteSpace: "nowrap" }}
+        className="text-[38px] font-bold uppercase text-black/10"
+        style={{ transform: "rotate(-32deg) scale(0.9)", whiteSpace: "nowrap" }}
       >
         Confidencial — uso interno
       </span>
@@ -151,18 +152,16 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
     <section className="print-page relative">
       {docMeta.confidential && <Watermark />}
       <div className="relative" style={{ zIndex: 1 }}>
-        <header className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
-          <div>
+        <div className="flex items-stretch border-b-4 border-black mb-3">
+          <div className="flex-1 pb-2">
             <div className="text-[15px] font-bold uppercase">{docMeta.title || "Piping Class"}</div>
             <div className="text-[10px] text-slate-600">Technical Specification{docMeta.client ? ` — Preparado para ${docMeta.client}` : ""}</div>
+            <div className="text-[9px] font-mono text-slate-500 mt-1">DOCUMENTO Nº: {docMeta.docNumber || "—"} · REVISIÓN: {docMeta.revision || "0"} · Clase {index + 1} de {total}</div>
           </div>
-          <div className="text-right text-[9px] font-mono">
-            <div className="text-[16px] font-bold text-slate-900 -mt-1 mb-0.5">{item.code}</div>
-            <div>DOCUMENTO Nº: {docMeta.docNumber || "—"}</div>
-            <div>REVISIÓN: {docMeta.revision || "0"}</div>
-            <div>Clase {index + 1} de {total}</div>
+          <div className="bg-black text-white flex items-center justify-center px-6 shrink-0">
+            <span className="text-[32px] font-bold font-mono leading-none tracking-tight">{item.code}</span>
           </div>
-        </header>
+        </div>
 
         <div className="flex text-[9px] border border-black mb-3">
           <div className="flex-1 p-2 border-r border-black">
@@ -372,6 +371,18 @@ export default function SpecBuilder() {
   };
   const remove = (itemId) => setSelected((sel) => sel.filter((s) => s.item.id !== itemId));
 
+  const toggleReviewed = async (s) => {
+    if (s.item.reviewedBy) {
+      await clearReviewed(s.item.id);
+      setSelected((sel) => sel.map((x) => x.item.id === s.item.id
+        ? { ...x, item: { ...x.item, reviewedBy: null, reviewedAt: null, reviewedAgainst: null } } : x));
+    } else {
+      const updated = await markReviewed(s.item.id, "");
+      setSelected((sel) => sel.map((x) => x.item.id === s.item.id
+        ? { ...x, item: { ...x.item, reviewedBy: updated.reviewed_by, reviewedAt: updated.reviewed_at, reviewedAgainst: updated.reviewed_against } } : x));
+    }
+  };
+
   const downloadExcel = () => {
     const rows = selected.map((s, i) => ({
       "Ítem": i + 1,
@@ -478,8 +489,10 @@ export default function SpecBuilder() {
             @page { size: letter; margin: 14mm; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
-          .print-page { page-break-after: always; padding: 4mm; overflow: hidden; }
+          .print-page { page-break-after: always; padding: 4mm; }
           .print-page:last-child { page-break-after: auto; }
+          .print-page table { page-break-inside: auto; }
+          .print-page tr { page-break-inside: avoid; }
         `}</style>
       </div>
     );
@@ -544,6 +557,7 @@ export default function SpecBuilder() {
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[12px] font-semibold text-slate-700">Borrador ({selected.length})</span>
+              <span className="text-[10.5px] text-slate-400 flex items-center gap-1"><ShieldAlert size={11} /> tocá el ícono para marcar revisada</span>
             </div>
             {selected.length === 0 ? (
               <div className="text-[12px] text-slate-400">Todavía no elegiste ninguna clase.</div>
@@ -552,7 +566,16 @@ export default function SpecBuilder() {
                 {selected.map((s) => (
                   <div key={s.item.id} className="flex items-center justify-between gap-2 text-[12px] px-2 py-1.5 rounded-md bg-slate-50">
                     <span className="min-w-0 truncate"><span className="font-mono font-semibold">{s.item.code}</span> <span className="text-slate-400">· {s.plantName.split(" · ")[0]}</span></span>
-                    <button onClick={() => remove(s.item.id)} className="text-slate-300 hover:text-red-500 shrink-0"><X size={13} /></button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => toggleReviewed(s)}
+                        title={s.item.reviewedBy ? `Revisado por ${s.item.reviewedBy}` : "Marcar como revisado"}
+                        className={s.item.reviewedBy ? "text-emerald-600 hover:text-emerald-700" : "text-slate-300 hover:text-amber-500"}
+                      >
+                        {s.item.reviewedBy ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
+                      </button>
+                      <button onClick={() => remove(s.item.id)} className="text-slate-300 hover:text-red-500"><X size={13} /></button>
+                    </div>
                   </div>
                 ))}
               </div>

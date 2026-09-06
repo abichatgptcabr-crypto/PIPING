@@ -71,8 +71,10 @@ export default function ViewSpec({ specId }) {
           @page { size: letter; margin: 14mm; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
-        .print-page { page-break-after: always; padding: 4mm; overflow: hidden; }
+        .print-page { page-break-after: always; padding: 4mm; }
         .print-page:last-child { page-break-after: auto; }
+        .print-page table { page-break-inside: auto; }
+        .print-page tr { page-break-inside: avoid; }
       `}</style>
     </div>
   );
