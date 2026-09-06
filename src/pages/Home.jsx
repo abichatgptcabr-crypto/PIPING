@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, Layers } from "lucide-react";
+import { ArrowRight, Layers, FileStack, Droplets } from "lucide-react";
 
 const TOOLS = [
   {
@@ -8,6 +8,7 @@ const TOOLS = [
     title: "Generador de piping class",
     desc: "Seleccioná el tipo de planta, el estándar de clases viene pre-cargado y editable. Ensamblá el código A-B-C-D y llegá a componentes, válvulas y ramificaciones.",
     meta: "ASME B31.3 · EPF + La Calera",
+    icon: Layers,
   },
   {
     id: "spec-builder",
@@ -15,6 +16,15 @@ const TOOLS = [
     title: "Armar especificación",
     desc: "Elegí clases de cualquiera de los proyectos cargados —EPF, La Calera, o combinando ambos— y armá un documento nuevo con el formato de spec, listo para imprimir o guardar como PDF.",
     meta: "cross-proyecto · exporta a PDF",
+    icon: FileStack,
+  },
+  {
+    id: "service-catalog",
+    status: "activo",
+    title: "Catálogo de servicios",
+    desc: "Todos los servicios cargados, de cualquier proyecto, agrupados por tipo (agua, gas, hidrocarburos, contra incendio...) con una descripción breve de cada uno.",
+    meta: "cross-proyecto · codificación para PDF",
+    icon: Droplets,
   },
 ];
 
@@ -64,6 +74,7 @@ export default function Home({ onOpen }) {
         <div className="space-y-3">
           {TOOLS.map((t) => {
             const active = t.status === "activo";
+            const Icon = t.icon;
             return (
               <button
                 key={t.id}
@@ -76,7 +87,7 @@ export default function Home({ onOpen }) {
                 }`}
               >
                 <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${active ? "bg-[#132A4C]" : "bg-slate-200"}`}>
-                  <Layers size={18} className={active ? "text-[#7FC4EE]" : "text-slate-400"} />
+                  <Icon size={18} className={active ? "text-[#7FC4EE]" : "text-slate-400"} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
