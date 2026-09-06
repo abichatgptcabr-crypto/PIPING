@@ -2,11 +2,11 @@
 
 @theme {
   /* Paleta Hytech, muestreada del isologo institucional (HY azul / tech grafito) */
-  --color-hytech-navy: #132A4C;
-  --color-hytech-blue-dark: #1F3F6E;
-  --color-hytech-blue: #2C568E;
-  --color-hytech-blue-mid: #3F72AC;
-  --color-hytech-sky: #7FC4EE;
+  --color-hytech-navy: #113044;
+  --color-hytech-blue-dark: #00406E;
+  --color-hytech-blue: #00589E;
+  --color-hytech-blue-mid: #00589E;
+  --color-hytech-sky: #4DA8DC;
   --color-hytech-paper: #F4F7FA;
 
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;

@@ -52,7 +52,7 @@ export default function App() {
               <span className="text-slate-300">/</span>
               <button
                 onClick={() => setPage("home")}
-                className="flex items-center gap-1.5 text-[13px] text-slate-500 hover:text-[#1F3F6E]"
+                className="flex items-center gap-1.5 text-[13px] text-slate-500 hover:text-[#00406E]"
               >
                 <ArrowLeft size={14} /> Inicio
               </button>
