@@ -310,6 +310,10 @@ export async function saveSpec(meta, selectedEntries) {
       doc_number: meta.docNumber, revision: meta.revision, company: meta.company,
       confidential: meta.confidential, date: meta.date, created_by: createdBy,
       service_coding: meta.serviceCoding,
+      prepared_by: meta.preparedBy, prepared_date: meta.preparedDate,
+      checked_by: meta.checkedBy, checked_date: meta.checkedDate,
+      approved_by: meta.approvedBy, approved_date: meta.approvedDate,
+      client_logo_url: meta.clientLogoUrl,
     })
     .select()
     .single();
@@ -439,4 +443,58 @@ export async function fetchSpecsForClass(classId) {
 export async function deleteSpec(id) {
   const { error } = await supabase.from("specs").delete().eq("id", id);
   if (error) throw error;
+}
+
+/* ═══════════════════════ Plantillas de selección ═══════════════════════
+   Una "receta" de clases reutilizable (no un documento) — para arrancar
+   una spec nueva con una selección ya armada en vez de tildar de cero. */
+export async function saveTemplate(name, description, selectedEntries) {
+  const createdBy = await getCurrentUserEmail();
+  const { data: tpl, error } = await supabase
+    .from("spec_templates")
+    .insert({ name, description, created_by: createdBy })
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (selectedEntries.length) {
+    const rows = selectedEntries.map((entry, i) => ({ template_id: tpl.id, class_id: entry.item.id, position: i }));
+    const { error: itemsErr } = await supabase.from("spec_template_items").insert(rows);
+    if (itemsErr) throw itemsErr;
+  }
+  return tpl;
+}
+
+export async function fetchTemplates() {
+  const { data, error } = await supabase.from("spec_templates").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+// Resuelve la plantilla contra las clases VIVAS actuales (a diferencia de
+// una spec, una plantilla no se congela — es a propósito un punto de
+// partida, así que siempre trae el estado más reciente de cada clase).
+export async function fetchTemplateItems(templateId) {
+  const { data, error } = await supabase
+    .from("spec_template_items")
+    .select("position, classes(*)")
+    .eq("template_id", templateId)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return data.filter((r) => r.classes).map((r) => r.classes);
+}
+
+export async function deleteTemplate(id) {
+  const { error } = await supabase.from("spec_templates").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ═══════════════════════ Logo del cliente (Storage) ═════════════════════ */
+export async function uploadClientLogo(file) {
+  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("logos").upload(path, file, { upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from("logos").getPublicUrl(path);
+  return data.publicUrl;
 }
