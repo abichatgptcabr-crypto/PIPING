@@ -296,7 +296,12 @@ export async function fetchSpecById(id) {
   return data;
 }
 
-export async function saveSpec(meta, classIds) {
+// Guarda una spec Y una foto congelada de cada clase incluida (código,
+// material, detalle completo con notas, etc.) tal como estaba en ese
+// momento — así una revisión guardada no cambia si alguien edita la clase
+// original más adelante. `selectedEntries` es el array completo del
+// borrador: [{ plantId, plantName, item }, ...].
+export async function saveSpec(meta, selectedEntries) {
   const createdBy = await getCurrentUserEmail();
   const { data: spec, error } = await supabase
     .from("specs")
@@ -310,22 +315,39 @@ export async function saveSpec(meta, classIds) {
     .single();
   if (error) throw error;
 
-  if (classIds.length) {
-    const rows = classIds.map((classId, i) => ({ spec_id: spec.id, class_id: classId, position: i }));
+  if (selectedEntries.length) {
+    const rows = selectedEntries.map((entry, i) => ({
+      spec_id: spec.id, class_id: entry.item.id, position: i, snapshot: entry,
+    }));
     const { error: itemsErr } = await supabase.from("spec_items").insert(rows);
     if (itemsErr) throw itemsErr;
   }
   return spec;
 }
 
+// Devuelve el borrador guardado de una spec: usa la foto congelada
+// (snapshot) si existe. Las specs guardadas antes de este cambio no
+// tienen snapshot — para esas, arma el mismo formato a partir de la
+// clase actual (fallback, ya no queda "congelado" para esas viejas).
 export async function fetchSpecItems(specId) {
   const { data, error } = await supabase
     .from("spec_items")
-    .select("position, classes(*)")
+    .select("position, snapshot, classes(*)")
     .eq("spec_id", specId)
     .order("position", { ascending: true });
   if (error) throw error;
-  return data.map((row) => row.classes);
+  return data.map((row) => {
+    if (row.snapshot) return row.snapshot;
+    const c = row.classes;
+    return {
+      plantId: null, plantName: null,
+      item: {
+        id: c.id, code: c.code, fam: c.fam, mat: c.mat, corr: c.corr, rating: c.rating,
+        design: c.design, services: c.services, page: c.page, detail: c.detail,
+        reviewedBy: c.reviewed_by, reviewedAt: c.reviewed_at, reviewedAgainst: c.reviewed_against,
+      },
+    };
+  });
 }
 
 /* ═══════════════════════════ Catálogo de servicios ═════════════════════ */
@@ -336,9 +358,9 @@ function classifyService(text) {
   const t = text.toLowerCase();
   if (/agua|water/.test(t)) return "Agua";
   if (/incendio|fire/.test(t)) return "Contra incendio";
-  if (/venteo|\bvent\b|flare|antorcha/.test(t)) return "Venteos y antorcha";
+  if (/venteo|\bvents?\b|flare|antorcha/.test(t)) return "Venteos y antorcha";
   if (/hidrocarb|hydrocarbon|crudo|condens/.test(t)) return "Hidrocarburos";
-  if (/gas|combustible|\bfuel\b|nitrogen|glycol|\bair\b/.test(t)) return "Gas y utilitarios";
+  if (/gas|combustible|\bfuel\b|nitr[oó]gen|glycol|glicol|\b(air|aire)\b/.test(t)) return "Gas y utilitarios";
   return "Otros";
 }
 
