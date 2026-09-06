@@ -3,6 +3,8 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import Home from "./pages/Home";
 import Generador from "./pages/Generador";
 import SpecBuilder from "./pages/SpecBuilder";
+import ServiceCatalog from "./pages/ServiceCatalog";
+import ViewSpec from "./pages/ViewSpec";
 import AuthGate from "./components/AuthGate";
 import hytechLogo from "./assets/hytech-logo.png";
 import { SEED_PLANTS } from "./data/plants";
@@ -11,6 +13,7 @@ import { syncFromSeed } from "./lib/api";
 const PAGE_TITLES = {
   generador: "Generador de piping class",
   "spec-builder": "Armar especificación",
+  "service-catalog": "Catálogo de servicios",
 };
 
 export default function App() {
@@ -18,15 +21,23 @@ export default function App() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState("");
 
+  // Link compartido de sólo lectura (?spec=<id>) — sin login, sin menú,
+  // pensado para mandarle a alguien de afuera del equipo.
+  const sharedSpecId = new URLSearchParams(window.location.search).get("spec");
+
   // Trae la base al día con lo que hay en el código — agrega plantas/clases
   // nuevas y completa el detalle de clases que quedaron en "sólo resumen"
   // en cargas anteriores. Corre en cada visita, no sólo la primera vez, y
-  // nunca pisa una clase que el usuario ya editó a mano.
+  // nunca pisa una clase que el usuario ya editó a mano. Se salta si es un
+  // link compartido: esa vista no necesita el registro completo.
   useEffect(() => {
+    if (sharedSpecId) { setDbReady(true); return; }
     syncFromSeed(SEED_PLANTS)
       .then(() => setDbReady(true))
       .catch((e) => { setDbError(e.message || "No se pudo conectar con la base de datos."); setDbReady(true); });
-  }, []);
+  }, [sharedSpecId]);
+
+  if (sharedSpecId) return <ViewSpec specId={sharedSpecId} />;
 
   return (
     <AuthGate>
@@ -64,6 +75,7 @@ export default function App() {
             {page === "home" && <Home onOpen={setPage} />}
             {page === "generador" && <Generador />}
             {page === "spec-builder" && <SpecBuilder />}
+            {page === "service-catalog" && <ServiceCatalog />}
           </>
         )}
       </main>
