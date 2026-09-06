@@ -62,7 +62,7 @@ export default function ViewSpec({ specId }) {
     <div className="bg-white min-h-screen">
       <div className="print:hidden sticky top-0 z-10 bg-slate-900 text-white px-4 sm:px-6 py-3 flex items-center justify-between">
         <span className="text-[13px] text-slate-300">Vista de sólo lectura — {state.docMeta.title}</span>
-        <button onClick={() => window.print()} className="flex items-center gap-1.5 text-[13px] bg-[#2C568E] hover:bg-[#1F3F6E] px-3 py-1.5 rounded-md font-medium">
+        <button onClick={() => window.print()} className="flex items-center gap-1.5 text-[13px] bg-[#00589E] hover:bg-[#00406E] px-3 py-1.5 rounded-md font-medium">
           <Printer size={15} /> Imprimir / Guardar como PDF
         </button>
       </div>

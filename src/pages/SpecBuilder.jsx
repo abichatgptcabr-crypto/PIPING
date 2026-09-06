@@ -46,9 +46,9 @@ function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
               <div key={fam}>
                 <button
                   onClick={() => onToggleGroup(plant, list, !allIn)}
-                  className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-slate-500 hover:text-[#1F3F6E] mb-1.5"
+                  className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-slate-500 hover:text-[#00406E] mb-1.5"
                 >
-                  {allIn ? <CheckSquare size={12} className="text-[#2C568E]" /> : someIn ? <MinusSquare size={12} className="text-[#2C568E]" /> : <Square size={12} className="text-slate-300" />}
+                  {allIn ? <CheckSquare size={12} className="text-[#00589E]" /> : someIn ? <MinusSquare size={12} className="text-[#00589E]" /> : <Square size={12} className="text-slate-300" />}
                   {FAMILIES[fam] || fam} <span className="text-slate-400 normal-case">({list.length})</span>
                 </button>
                 <div className="grid sm:grid-cols-2 gap-1.5">
@@ -59,10 +59,10 @@ function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
                         key={k.id}
                         onClick={() => onToggle(plant, k)}
                         className={`flex items-start gap-2 text-left px-2.5 py-2 rounded-md border text-[12.5px] transition ${
-                          checked ? "border-[#2C568E] bg-[#EAF3FB]" : "border-slate-200 bg-white hover:border-slate-300"
+                          checked ? "border-[#00589E] bg-[#EAF3FB]" : "border-slate-200 bg-white hover:border-slate-300"
                         }`}
                       >
-                        {checked ? <CheckSquare size={14} className="text-[#2C568E] mt-0.5 shrink-0" /> : <Square size={14} className="text-slate-300 mt-0.5 shrink-0" />}
+                        {checked ? <CheckSquare size={14} className="text-[#00589E] mt-0.5 shrink-0" /> : <Square size={14} className="text-slate-300 mt-0.5 shrink-0" />}
                         <span className="min-w-0">
                           <span className="font-mono font-semibold text-slate-800">{k.code}</span>
                           <span className="text-slate-500"> · {k.rating} · {k.mat}</span>
@@ -610,7 +610,7 @@ export default function SpecBuilder() {
           <button onClick={() => setMode("build")} className="flex items-center gap-1.5 text-[13px] hover:text-slate-300">
             <ArrowLeft size={15} /> Volver a editar
           </button>
-          <button onClick={() => window.print()} className="flex items-center gap-1.5 text-[13px] bg-[#2C568E] hover:bg-[#1F3F6E] px-3 py-1.5 rounded-md font-medium">
+          <button onClick={() => window.print()} className="flex items-center gap-1.5 text-[13px] bg-[#00589E] hover:bg-[#00406E] px-3 py-1.5 rounded-md font-medium">
             <Printer size={15} /> Imprimir / Guardar como PDF
           </button>
         </div>
@@ -643,10 +643,10 @@ export default function SpecBuilder() {
         <div>
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <FileStack size={18} className="text-[#2C568E]" />
+              <FileStack size={18} className="text-[#00589E]" />
               <h2 className="text-[16px] font-semibold text-slate-900">Armar especificación</h2>
             </div>
-            <button onClick={openSavedList} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#1F3F6E]">
+            <button onClick={openSavedList} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#00406E]">
               <FolderOpen size={14} /> Specs guardadas
             </button>
           </div>
@@ -656,7 +656,7 @@ export default function SpecBuilder() {
           <div className="relative mb-5">
             <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar clase, servicio o material…"
-              className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none bg-white" />
+              className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white" />
           </div>
           {plants.map((p) => (
             <PlantColumn key={p.id} plant={p} selectedIds={selectedIds} onToggle={toggle} onToggleGroup={toggleGroup} q={q} />
@@ -674,18 +674,18 @@ export default function SpecBuilder() {
                 <div key={key}>
                   <label className="text-[10px] uppercase tracking-wider text-slate-400">{label}</label>
                   <input value={docMeta[key]} onChange={(e) => setDocMeta({ ...docMeta, [key]: e.target.value })}
-                    className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
+                    className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
                   {key === "docNumber" && (
                     <div className="text-[10.5px] text-slate-400 mt-1 leading-snug">Si este N° de documento ya existe entre las specs guardadas, "Guardar" agrega una revisión nueva — no pisa la anterior.</div>
                   )}
                 </div>
               ))}
               <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none pt-1">
-                <input type="checkbox" checked={docMeta.confidential} onChange={(e) => setDocMeta({ ...docMeta, confidential: e.target.checked })} className="accent-[#2C568E]" />
+                <input type="checkbox" checked={docMeta.confidential} onChange={(e) => setDocMeta({ ...docMeta, confidential: e.target.checked })} className="accent-[#00589E]" />
                 Marca de "Confidencial — uso interno" en el PDF
               </label>
               <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
-                <input type="checkbox" checked={docMeta.serviceCoding} onChange={(e) => setDocMeta({ ...docMeta, serviceCoding: e.target.checked })} className="accent-[#2C568E]" />
+                <input type="checkbox" checked={docMeta.serviceCoding} onChange={(e) => setDocMeta({ ...docMeta, serviceCoding: e.target.checked })} className="accent-[#00589E]" />
                 Agregar índice de servicios codificado al final del PDF
               </label>
 
@@ -697,7 +697,7 @@ export default function SpecBuilder() {
                     <button onClick={() => setDocMeta({ ...docMeta, clientLogoUrl: "" })} className="text-[11px] text-slate-400 hover:text-red-500">Quitar</button>
                   </div>
                 ) : (
-                  <label className="mt-1 flex items-center gap-1.5 text-[12px] px-2.5 py-1.5 rounded-md border border-dashed border-slate-300 text-slate-500 hover:border-[#7FC4EE] cursor-pointer w-fit">
+                  <label className="mt-1 flex items-center gap-1.5 text-[12px] px-2.5 py-1.5 rounded-md border border-dashed border-slate-300 text-slate-500 hover:border-[#4DA8DC] cursor-pointer w-fit">
                     {uploadingLogo ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
                     {uploadingLogo ? "Subiendo…" : "Subir logo"}
                     <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="hidden" />
@@ -714,9 +714,9 @@ export default function SpecBuilder() {
                 ].map(([nameKey, dateKey, label]) => (
                   <div key={nameKey} className="grid grid-cols-[1fr_100px] gap-1.5">
                     <input value={docMeta[nameKey]} onChange={(e) => setDocMeta({ ...docMeta, [nameKey]: e.target.value })}
-                      placeholder={label} className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
+                      placeholder={label} className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
                     <input value={docMeta[dateKey]} onChange={(e) => setDocMeta({ ...docMeta, [dateKey]: e.target.value })}
-                      placeholder="Fecha" className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
+                      placeholder="Fecha" className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
                   </div>
                 ))}
               </div>
@@ -726,7 +726,7 @@ export default function SpecBuilder() {
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[12px] font-semibold text-slate-700">Plantillas</span>
-              <button onClick={openTemplates} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#1F3F6E]">
+              <button onClick={openTemplates} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#00406E]">
                 <LayoutTemplate size={14} /> Usar plantilla
               </button>
             </div>
@@ -734,15 +734,15 @@ export default function SpecBuilder() {
               <button
                 disabled={selected.length === 0}
                 onClick={() => setShowTemplateForm(true)}
-                className="w-full flex items-center justify-center gap-1.5 text-[12.5px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-1.5 text-[12.5px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#4DA8DC] disabled:opacity-50"
               >
                 <Save size={13} /> Guardar esta selección como plantilla
               </button>
             ) : (
               <div className="flex gap-1.5">
                 <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Nombre de la plantilla…" autoFocus
-                  className="flex-1 text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
-                <button onClick={confirmSaveTemplate} disabled={savingTemplate || !templateName.trim()} className="px-2.5 py-1.5 rounded-md bg-[#2C568E] text-white disabled:opacity-50">
+                  className="flex-1 text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
+                <button onClick={confirmSaveTemplate} disabled={savingTemplate || !templateName.trim()} className="px-2.5 py-1.5 rounded-md bg-[#00589E] text-white disabled:opacity-50">
                   {savingTemplate ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                 </button>
                 <button onClick={() => { setShowTemplateForm(false); setTemplateName(""); }} className="px-2 text-slate-400 hover:text-red-500"><X size={14} /></button>
@@ -768,7 +768,7 @@ export default function SpecBuilder() {
                           <button
                             onClick={() => setEditingNotesFor(editingNotesFor === s.item.id ? null : s.item.id)}
                             title="Editar notas para este documento"
-                            className={editingNotesFor === s.item.id ? "text-[#2C568E]" : "text-slate-300 hover:text-[#2C568E]"}
+                            className={editingNotesFor === s.item.id ? "text-[#00589E]" : "text-slate-300 hover:text-[#00589E]"}
                           >
                             <StickyNote size={14} />
                           </button>
@@ -796,7 +796,7 @@ export default function SpecBuilder() {
                                 notes[i] = e.target.value;
                                 setNotesFor(s.item.id, notes);
                               }}
-                              className="flex-1 text-[11.5px] px-1.5 py-1 border border-slate-200 rounded focus:border-[#3F72AC] focus:outline-none bg-white"
+                              className="flex-1 text-[11.5px] px-1.5 py-1 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none bg-white"
                             />
                             <button
                               onClick={() => setNotesFor(s.item.id, s.item.detail.notes.filter((_, k) => k !== i))}
@@ -805,7 +805,7 @@ export default function SpecBuilder() {
                           </div>
                         ))}
                         <div className="flex items-center justify-between pt-0.5">
-                          <button onClick={() => setNotesFor(s.item.id, [...s.item.detail.notes, ""])} className="text-[11px] text-[#1F3F6E] hover:text-[#173257] flex items-center gap-1"><Plus size={11} /> Agregar nota</button>
+                          <button onClick={() => setNotesFor(s.item.id, [...s.item.detail.notes, ""])} className="text-[11px] text-[#00406E] hover:text-[#173257] flex items-center gap-1"><Plus size={11} /> Agregar nota</button>
                           <button onClick={() => restoreNotes(s.item.id)} className="text-[11px] text-slate-500 hover:text-slate-700 flex items-center gap-1"><RotateCcw size={11} /> Restaurar originales</button>
                         </div>
                       </div>
@@ -818,21 +818,21 @@ export default function SpecBuilder() {
               <button
                 disabled={selected.length === 0 || saving}
                 onClick={handleSave}
-                className="flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE] disabled:opacity-50"
+                className="flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-md border border-slate-200 text-slate-700 hover:border-[#4DA8DC] disabled:opacity-50"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar
               </button>
               <button
                 disabled={selected.length === 0}
                 onClick={() => setMode("print")}
-                className="flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E] disabled:bg-slate-200 disabled:text-slate-400"
+                className="flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-md bg-[#00589E] text-white hover:bg-[#00406E] disabled:bg-slate-200 disabled:text-slate-400"
               >
                 <Printer size={14} /> Ver documento
               </button>
               <button
                 disabled={selected.length === 0}
                 onClick={downloadExcel}
-                className="col-span-2 flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE] disabled:opacity-50"
+                className="col-span-2 flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-md border border-slate-200 text-slate-700 hover:border-[#4DA8DC] disabled:opacity-50"
               >
                 <FileSpreadsheet size={14} /> Descargar Excel
               </button>
@@ -871,10 +871,10 @@ export default function SpecBuilder() {
                             </div>
                             <div className="text-[11px] text-slate-400">{s.client ? `Para ${s.client} · ` : ""}{new Date(s.created_at).toLocaleDateString("es-AR")} · {s.created_by}</div>
                           </button>
-                          <button onClick={() => copyShareLink(s.id)} title="Copiar link para compartir (solo lectura)" className="text-slate-300 hover:text-[#2C568E] shrink-0">
+                          <button onClick={() => copyShareLink(s.id)} title="Copiar link para compartir (solo lectura)" className="text-slate-300 hover:text-[#00589E] shrink-0">
                             {copiedId === s.id ? <Check size={14} className="text-emerald-600" /> : <Link2 size={14} />}
                           </button>
-                          <button onClick={() => duplicateAsNew(s)} title="Usar como base para un documento nuevo" className="text-slate-300 hover:text-[#2C568E] shrink-0">
+                          <button onClick={() => duplicateAsNew(s)} title="Usar como base para un documento nuevo" className="text-slate-300 hover:text-[#00589E] shrink-0">
                             <Copy size={14} />
                           </button>
                           <button onClick={() => removeSaved(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>

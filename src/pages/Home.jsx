@@ -35,8 +35,8 @@ export default function Home({ onOpen }) {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-10 sm:pt-20 sm:pb-14">
         <div className="grid lg:grid-cols-[1fr_auto] gap-10 items-end">
           <div>
-            <div className="text-[13px] font-mono text-[#2C568E] mb-3">HYTECH · ING. DE CAÑERÍAS</div>
-            <h1 className="text-[2.6rem] sm:text-[3.6rem] leading-[0.98] font-semibold tracking-tight text-slate-900">
+            <div className="text-[13px] font-mono text-[#00589E] mb-3">HYTECH · ING. DE CAÑERÍAS</div>
+            <h1 className="text-[2.6rem] sm:text-[3.6rem] leading-[0.98] font-semibold tracking-tight text-[#113044]">
               Herramientas internas<br />para piping
             </h1>
             <p className="mt-5 max-w-lg text-[15px] text-slate-600 leading-relaxed">
@@ -82,12 +82,12 @@ export default function Home({ onOpen }) {
                 onClick={() => active && onOpen(t.id)}
                 className={`w-full text-left grid sm:grid-cols-[auto_1fr_auto] gap-4 sm:gap-8 items-start sm:items-center px-5 py-5 border transition ${
                   active
-                    ? "border-slate-300 bg-white hover:border-[#3F72AC] hover:shadow-[0_1px_0_0_rgba(0,0,0,0.02)] cursor-pointer"
+                    ? "border-slate-300 bg-white hover:border-[#00589E] hover:shadow-[0_1px_0_0_rgba(0,0,0,0.02)] cursor-pointer"
                     : "border-slate-200 bg-white/40 cursor-default"
                 }`}
               >
-                <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${active ? "bg-[#132A4C]" : "bg-slate-200"}`}>
-                  <Icon size={18} className={active ? "text-[#7FC4EE]" : "text-slate-400"} />
+                <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${active ? "bg-[#113044]" : "bg-slate-200"}`}>
+                  <Icon size={18} className={active ? "text-[#4DA8DC]" : "text-slate-400"} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -100,7 +100,7 @@ export default function Home({ onOpen }) {
                   <div className="mt-2 text-[11px] font-mono text-slate-400">{t.meta}</div>
                 </div>
                 {active && (
-                  <div className="hidden sm:flex items-center gap-1.5 text-[13px] text-[#1F3F6E] font-medium shrink-0">
+                  <div className="hidden sm:flex items-center gap-1.5 text-[13px] text-[#00406E] font-medium shrink-0">
                     Abrir <ArrowRight size={15} />
                   </div>
                 )}

@@ -43,7 +43,7 @@ function ServiceRow({ svc, code, usedIn, onSave }) {
           <div>
             <label className="text-[10px] uppercase tracking-wider text-slate-400">Categoría</label>
             <select value={cat} onChange={(e) => setCat(e.target.value)}
-              className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none">
+              className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none">
               {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -51,10 +51,10 @@ function ServiceRow({ svc, code, usedIn, onSave }) {
             <label className="text-[10px] uppercase tracking-wider text-slate-400">Descripción breve</label>
             <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2}
               placeholder="Qué es este servicio, en una o dos líneas…"
-              className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none" />
+              className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
           </div>
           <div className="flex gap-2">
-            <button onClick={save} disabled={saving} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E] disabled:opacity-60">
+            <button onClick={save} disabled={saving} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#00589E] text-white hover:bg-[#00406E] disabled:opacity-60">
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Guardar
             </button>
             <button onClick={() => { setEditing(false); setDesc(svc.description || ""); setCat(svc.category); }} className="text-[12px] px-2.5 py-1.5 rounded-md text-slate-500 hover:bg-slate-100">Cancelar</button>
@@ -120,7 +120,7 @@ export default function ServiceCatalog() {
     <div className="bg-[#F4F7FA] min-h-[70vh]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-center gap-2 mb-1">
-          <Droplets size={18} className="text-[#2C568E]" />
+          <Droplets size={18} className="text-[#00589E]" />
           <h2 className="text-[16px] font-semibold text-slate-900">Catálogo de servicios</h2>
         </div>
         <p className="text-[13px] text-slate-500 mb-4">
@@ -130,7 +130,7 @@ export default function ServiceCatalog() {
         <div className="relative mb-5">
           <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar servicio…"
-            className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none bg-white" />
+            className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white" />
         </div>
 
         {CATEGORY_ORDER.filter((c) => grouped[c]?.length).map((cat) => (

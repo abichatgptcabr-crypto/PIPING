@@ -21,7 +21,7 @@ function Gauge5({ level }) {
   return (
     <span className="inline-flex items-end gap-[2px] h-4" title={`Rating ${level}/5`}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={`w-[3px] rounded-sm ${i <= level ? "bg-[#2C568E]" : "bg-slate-200"}`}
+        <span key={i} className={`w-[3px] rounded-sm ${i <= level ? "bg-[#00589E]" : "bg-slate-200"}`}
           style={{ height: `${5 + i * 2}px` }} />
       ))}
     </span>
@@ -69,7 +69,7 @@ function EditTable({ cols, rows, onChange }) {
                 {r.map((cell, j) => (
                   <td key={j} className="p-0.5">
                     <input value={cell} onChange={(e) => upd(i, j, e.target.value)}
-                      className="w-full min-w-[64px] px-1.5 py-1 text-[11px] rounded border border-transparent hover:border-slate-200 focus:border-[#3F72AC] focus:outline-none bg-transparent" />
+                      className="w-full min-w-[64px] px-1.5 py-1 text-[11px] rounded border border-transparent hover:border-slate-200 focus:border-[#00589E] focus:outline-none bg-transparent" />
                   </td>
                 ))}
                 <td className="px-1 text-center">
@@ -81,7 +81,7 @@ function EditTable({ cols, rows, onChange }) {
         </table>
       </div>
       <button onClick={() => onChange([...rows, cols.map(() => "")])}
-        className="text-[12px] text-[#1F3F6E] hover:text-[#173257] flex items-center gap-1"><Plus size={13} /> Agregar fila</button>
+        className="text-[12px] text-[#00406E] hover:text-[#173257] flex items-center gap-1"><Plus size={13} /> Agregar fila</button>
     </div>
   );
 }
@@ -95,7 +95,7 @@ function BranchMatrix({ data }) {
       <div className="overflow-x-auto border border-slate-200 rounded-lg inline-block max-w-full">
         <table className="text-[11px] font-mono border-collapse">
           <thead><tr>
-            <th className="bg-[#1D3A63] text-slate-100 px-2 py-1.5 text-[10px]">RAMA \ RUN</th>
+            <th className="bg-[#16405F] text-slate-100 px-2 py-1.5 text-[10px]">RAMA \ RUN</th>
             {sizes.map((s) => <th key={s} className="bg-slate-100 text-slate-600 px-2 py-1.5 font-semibold border-l border-slate-200">{s}</th>)}
           </tr></thead>
           <tbody>
@@ -196,8 +196,8 @@ function ReviewPanel({ item, onMark, onClear }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <input value={against} onChange={(e) => setAgainst(e.target.value)} placeholder="ej. ASME B31.3-2024"
-          className="text-[12px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none w-40" />
-        <button onClick={() => onMark(against)} className="text-[12px] px-2.5 py-1.5 rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E]">Marcar como revisado</button>
+          className="text-[12px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none w-40" />
+        <button onClick={() => onMark(against)} className="text-[12px] px-2.5 py-1.5 rounded-md bg-[#00589E] text-white hover:bg-[#00406E]">Marcar como revisado</button>
         {item.reviewedBy && <button onClick={onClear} className="text-[12px] px-2.5 py-1.5 rounded-md text-slate-500 hover:bg-slate-100">Quitar</button>}
       </div>
     </div>
@@ -234,7 +234,7 @@ function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed })
             <div className="flex items-center gap-3">
               {editing ? (
                 <input value={draft?.code || ""} onChange={(e) => setDraft({ ...draft, code: e.target.value })}
-                  className="font-mono text-2xl font-bold text-slate-900 w-28 border-b border-[#7FC4EE] focus:outline-none" />
+                  className="font-mono text-2xl font-bold text-slate-900 w-28 border-b border-[#4DA8DC] focus:outline-none" />
               ) : (
                 <span className="font-mono text-2xl font-bold text-slate-900">{view.code}</span>
               )}
@@ -244,10 +244,10 @@ function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed })
               <div className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
                 <label className="col-span-3 text-[10px] uppercase tracking-wider text-slate-400">Servicios (uno por línea)</label>
                 <textarea value={(draft.services || []).join("\n")} onChange={(e) => setDraft({ ...draft, services: e.target.value.split("\n") })}
-                  rows={3} className="col-span-3 font-mono text-[12px] px-2 py-1.5 border border-slate-200 rounded focus:border-[#3F72AC] focus:outline-none" />
-                <input value={draft.mat} onChange={(e) => setDraft({ ...draft, mat: e.target.value })} placeholder="Material" className="px-2 py-1 border border-slate-200 rounded focus:border-[#3F72AC] focus:outline-none" />
-                <input value={draft.corr} onChange={(e) => setDraft({ ...draft, corr: e.target.value })} placeholder="Corrosión" className="px-2 py-1 border border-slate-200 rounded focus:border-[#3F72AC] focus:outline-none" />
-                <input value={draft.rating} onChange={(e) => setDraft({ ...draft, rating: e.target.value })} placeholder="Rating" className="px-2 py-1 border border-slate-200 rounded focus:border-[#3F72AC] focus:outline-none" />
+                  rows={3} className="col-span-3 font-mono text-[12px] px-2 py-1.5 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none" />
+                <input value={draft.mat} onChange={(e) => setDraft({ ...draft, mat: e.target.value })} placeholder="Material" className="px-2 py-1 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none" />
+                <input value={draft.corr} onChange={(e) => setDraft({ ...draft, corr: e.target.value })} placeholder="Corrosión" className="px-2 py-1 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none" />
+                <input value={draft.rating} onChange={(e) => setDraft({ ...draft, rating: e.target.value })} placeholder="Rating" className="px-2 py-1 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none" />
               </div>
             ) : (
               <>
@@ -259,13 +259,13 @@ function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed })
           <div className="flex items-center gap-2 shrink-0">
             {editing ? (
               <>
-                <button onClick={save} disabled={saving} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E] disabled:opacity-60">
+                <button onClick={save} disabled={saving} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md bg-[#00589E] text-white hover:bg-[#00406E] disabled:opacity-60">
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar
                 </button>
                 <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-[13px] rounded-md text-slate-500 hover:bg-slate-100">Cancelar</button>
               </>
             ) : (
-              <button onClick={() => setEditing(true)} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Pencil size={13} /> Editar</button>
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md border border-slate-200 text-slate-700 hover:border-[#4DA8DC]"><Pencil size={13} /> Editar</button>
             )}
             <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400"><X size={18} /></button>
           </div>
@@ -282,7 +282,7 @@ function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed })
             const Icon = t.icon; const active = tab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-t-md whitespace-nowrap border-b-2 ${active ? "border-[#2C568E] text-slate-900 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+                className={`flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-t-md whitespace-nowrap border-b-2 ${active ? "border-[#00589E] text-slate-900 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
                 <Icon size={14} /> {t.label}
               </button>
             );
@@ -365,7 +365,7 @@ function DesignEdit({ T, P, onChange, rating }) {
               <td className="px-2 py-1 text-slate-500 font-semibold whitespace-nowrap border-b border-slate-100">Temp. °C</td>
               {T.map((t, i) => (
                 <td key={i} className="p-0.5 border-b border-l border-slate-100">
-                  <input value={t} onChange={(e) => setT(i, e.target.value)} className="w-20 px-1.5 py-1 text-center rounded border border-transparent hover:border-slate-200 focus:border-[#3F72AC] focus:outline-none bg-transparent" />
+                  <input value={t} onChange={(e) => setT(i, e.target.value)} className="w-20 px-1.5 py-1 text-center rounded border border-transparent hover:border-slate-200 focus:border-[#00589E] focus:outline-none bg-transparent" />
                 </td>
               ))}
               <td className="border-b border-slate-100"></td>
@@ -374,7 +374,7 @@ function DesignEdit({ T, P, onChange, rating }) {
               <td className="px-2 py-1 text-slate-500 font-semibold whitespace-nowrap">Pres. kg/cm²</td>
               {P.map((p, i) => (
                 <td key={i} className="p-0.5 border-l border-slate-100">
-                  <input value={p} onChange={(e) => setP(i, e.target.value)} className="w-20 px-1.5 py-1 text-center rounded border border-transparent hover:border-slate-200 focus:border-[#3F72AC] focus:outline-none bg-transparent" />
+                  <input value={p} onChange={(e) => setP(i, e.target.value)} className="w-20 px-1.5 py-1 text-center rounded border border-transparent hover:border-slate-200 focus:border-[#00589E] focus:outline-none bg-transparent" />
                 </td>
               ))}
               <td className="px-1 text-center align-middle">
@@ -385,7 +385,7 @@ function DesignEdit({ T, P, onChange, rating }) {
           </tbody>
         </table>
       </div>
-      <button onClick={() => onChange([...T, ""], [...P, ""])} className="text-[12px] text-[#1F3F6E] hover:text-[#173257] flex items-center gap-1"><Plus size={13} /> Agregar columna (temperatura)</button>
+      <button onClick={() => onChange([...T, ""], [...P, ""])} className="text-[12px] text-[#00406E] hover:text-[#173257] flex items-center gap-1"><Plus size={13} /> Agregar columna (temperatura)</button>
     </div>
   );
 }
@@ -396,11 +396,11 @@ function NotesEdit({ notes, onChange }) {
       {notes.map((n, i) => (
         <div key={i} className="flex gap-2 items-start">
           <span className="font-mono text-[12px] text-slate-400 mt-2">{i + 1}.</span>
-          <textarea value={n} onChange={(e) => upd(i, e.target.value)} rows={2} className="flex-1 text-[13px] px-2 py-1.5 border border-slate-200 rounded focus:border-[#3F72AC] focus:outline-none" />
+          <textarea value={n} onChange={(e) => upd(i, e.target.value)} rows={2} className="flex-1 text-[13px] px-2 py-1.5 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none" />
           <button onClick={() => onChange(notes.filter((_, k) => k !== i))} className="text-slate-300 hover:text-red-500 mt-2"><X size={14} /></button>
         </div>
       ))}
-      <button onClick={() => onChange([...notes, ""])} className="text-[12px] text-[#1F3F6E] hover:text-[#173257] flex items-center gap-1"><Plus size={13} /> Agregar nota</button>
+      <button onClick={() => onChange([...notes, ""])} className="text-[12px] text-[#00406E] hover:text-[#173257] flex items-center gap-1"><Plus size={13} /> Agregar nota</button>
     </div>
   );
 }
@@ -409,12 +409,12 @@ function CodeStamp({ sel, setSel, classes, slots }) {
   const assembled = slots.map((s) => sel[s.slot] || "·").join("");
   const match = classes.find((k) => k.code === assembled);
   return (
-    <div className="rounded-xl bg-[#122542] text-slate-100 p-5">
+    <div className="rounded-xl bg-[#113044] text-slate-100 p-5">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8FAFD6] mb-4"><Layers size={13} /> Ensamblador de clase</div>
       <div className="flex items-baseline justify-center gap-1 mb-4 flex-wrap">
         {slots.map((s) => (
           <span key={s.slot} className="flex flex-col items-center">
-            <span className={`font-mono text-4xl leading-none ${sel[s.slot] ? "text-[#7FC4EE]" : "text-[#3C567F]"}`}>{sel[s.slot] || "·"}</span>
+            <span className={`font-mono text-4xl leading-none ${sel[s.slot] ? "text-[#4DA8DC]" : "text-[#3C567F]"}`}>{sel[s.slot] || "·"}</span>
             <span className="mt-2 text-[10px] tracking-widest text-[#7291BB]">{s.slot}</span>
           </span>
         ))}
@@ -429,7 +429,7 @@ function CodeStamp({ sel, setSel, classes, slots }) {
           <div key={s.slot}>
             <div className="text-[10px] uppercase tracking-wider text-[#7291BB] mb-1">{s.slot} · {s.label}</div>
             <select value={sel[s.slot] || ""} onChange={(e) => setSel({ ...sel, [s.slot]: e.target.value })}
-              className="w-full bg-[#1D3A63] text-slate-100 text-[13px] rounded-md px-2 py-1.5 border border-[#2C4C7C] focus:border-[#3F72AC] focus:outline-none">
+              className="w-full bg-[#16405F] text-slate-100 text-[13px] rounded-md px-2 py-1.5 border border-[#1A4A73] focus:border-[#00589E] focus:outline-none">
               <option value="">—</option>
               {s.rows.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.value}</option>)}
             </select>
@@ -451,7 +451,7 @@ function Convention({ slots }) {
         <div className="px-4 pb-4 space-y-3">
           {slots.map((s) => (
             <div key={s.slot}>
-              <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1.5"><span className="font-mono font-semibold text-[#1F3F6E]">{s.slot}</span> · {s.label}</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-1.5"><span className="font-mono font-semibold text-[#00406E]">{s.slot}</span> · {s.label}</div>
               <div className="border border-slate-200 rounded-md overflow-hidden">
                 {s.rows.map((r, i) => (
                   <div key={r.code} className={`flex text-[12px] ${i % 2 ? "bg-slate-50" : "bg-white"}`}>
@@ -481,13 +481,13 @@ function ReviewBadge({ item }) {
 function RegisterCard({ item, onOpen, onToggle, onDuplicate, onRemove }) {
   const lvl = ratingLevel(item.rating);
   return (
-    <div className={`group relative rounded-lg border bg-white transition p-3.5 ${item.on ? "border-slate-200 hover:border-[#7FC4EE] hover:shadow-sm" : "border-slate-100 opacity-60"}`}>
+    <div className={`group relative rounded-lg border bg-white transition p-3.5 ${item.on ? "border-slate-200 hover:border-[#4DA8DC] hover:shadow-sm" : "border-slate-100 opacity-60"}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <button onClick={() => onToggle(item)} title={item.on ? "Incluida en el proyecto" : "Excluida del proyecto"}>
-            {item.on ? <CheckSquare size={16} className="text-[#2C568E]" /> : <Square size={16} className="text-slate-300" />}
+            {item.on ? <CheckSquare size={16} className="text-[#00589E]" /> : <Square size={16} className="text-slate-300" />}
           </button>
-          <button onClick={() => onOpen(item)} className="font-mono text-lg font-bold text-slate-900 hover:text-[#1F3F6E]">{item.code}</button>
+          <button onClick={() => onOpen(item)} className="font-mono text-lg font-bold text-slate-900 hover:text-[#00406E]">{item.code}</button>
         </div>
         <Gauge5 level={lvl} />
       </div>
@@ -525,20 +525,20 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-slate-400"><Building2 size={16} /><span className="text-[12px] uppercase tracking-wider">Tipo de planta</span></div>
         <select value={activeId} onChange={(e) => setActiveId(e.target.value)}
-          className="text-[14px] font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 focus:border-[#3F72AC] focus:outline-none">
+          className="text-[14px] font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 focus:border-[#00589E] focus:outline-none">
           {plants.map((p) => <option key={p.id} value={p.id}>{p.name}{p.seeded ? "  ✓ cargada" : "  · plantilla"}</option>)}
         </select>
         {renaming ? (
           <span className="flex items-center gap-1">
-            <input value={name} onChange={(e) => setName(e.target.value)} className="text-[14px] px-2 py-1 border border-[#7FC4EE] rounded focus:outline-none" />
-            <button onClick={() => { onRename(activeId, name); setRenaming(false); }} className="p-1.5 text-[#1F3F6E]"><Check size={15} /></button>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="text-[14px] px-2 py-1 border border-[#4DA8DC] rounded focus:outline-none" />
+            <button onClick={() => { onRename(activeId, name); setRenaming(false); }} className="p-1.5 text-[#00406E]"><Check size={15} /></button>
           </span>
         ) : (
           <button onClick={() => setRenaming(true)} className="p-1.5 text-slate-400 hover:text-slate-700" title="Renombrar"><Pencil size={14} /></button>
         )}
         {plants.length > 1 && <button onClick={() => onDelete(activeId)} className="p-1.5 text-slate-400 hover:text-red-500" title="Eliminar tipo de planta"><Trash2 size={14} /></button>}
         <div className="relative ml-auto">
-          <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE]"><Plus size={14} /> Nuevo tipo de planta</button>
+          <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#4DA8DC]"><Plus size={14} /> Nuevo tipo de planta</button>
           {menu && (
             <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-[13px]">
               <button onClick={() => { onNew("dup"); setMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-[#EAF3FB]">
@@ -578,7 +578,7 @@ function FacetGroup({ label, options, selected, onToggle }) {
           return (
             <button key={opt} onClick={() => onToggle(opt)}
               className={`text-[11.5px] px-2 py-1 rounded-md border font-mono transition ${
-                active ? "bg-[#2C568E] border-[#2C568E] text-white" : "bg-white border-slate-200 text-slate-600 hover:border-[#7FC4EE]"
+                active ? "bg-[#00589E] border-[#00589E] text-white" : "bg-white border-slate-200 text-slate-600 hover:border-[#4DA8DC]"
               }`}>
               {opt}
             </button>
@@ -597,7 +597,7 @@ function TriToggle({ label, value, onChange, options }) {
         {options.map(([val, text]) => (
           <button key={val} onClick={() => onChange(val)}
             className={`text-[11.5px] px-2 py-1 rounded-md border transition ${
-              value === val ? "bg-[#2C568E] border-[#2C568E] text-white" : "bg-white border-slate-200 text-slate-600 hover:border-[#7FC4EE]"
+              value === val ? "bg-[#00589E] border-[#00589E] text-white" : "bg-white border-slate-200 text-slate-600 hover:border-[#4DA8DC]"
             }`}>
             {text}
           </button>
@@ -673,7 +673,7 @@ function CompareView({ plants, onClose }) {
   const a = aPlant?.classes.find((k) => k.code === aCode);
   const b = bPlant?.classes.find((k) => k.code === bCode);
 
-  const selStyle = "text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none bg-white flex-1 min-w-0";
+  const selStyle = "text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white flex-1 min-w-0";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
@@ -719,7 +719,7 @@ function CompareView({ plants, onClose }) {
                 const Icon = t.icon; const active = tab === t.id;
                 return (
                   <button key={t.id} onClick={() => setTab(t.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-t-md whitespace-nowrap border-b-2 ${active ? "border-[#2C568E] text-slate-900 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+                    className={`flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-t-md whitespace-nowrap border-b-2 ${active ? "border-[#00589E] text-slate-900 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
                     <Icon size={14} /> {t.label}
                   </button>
                 );
@@ -990,9 +990,9 @@ export default function Generador() {
               <span className="ml-2 text-[12px] font-normal text-slate-500">{includedCount} de {active.classes.length} en el proyecto</span>
             </h2>
             <div className="flex items-center gap-2">
-              <button onClick={handlers.addBlank} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#132A4C] text-white hover:bg-[#1F3F6E]"><Plus size={13} /> Agregar clase</button>
-              <button onClick={() => setCompareOpen(true)} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]"><GitCompare size={13} /> Comparar clases</button>
-              {active.seeded && <button onClick={handlers.resetStandard} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE]" title="Volver a las clases del documento original"><RotateCcw size={13} /> Restaurar estándar</button>}
+              <button onClick={handlers.addBlank} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#113044] text-white hover:bg-[#00406E]"><Plus size={13} /> Agregar clase</button>
+              <button onClick={() => setCompareOpen(true)} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#4DA8DC]"><GitCompare size={13} /> Comparar clases</button>
+              {active.seeded && <button onClick={handlers.resetStandard} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#4DA8DC]" title="Volver a las clases del documento original"><RotateCcw size={13} /> Restaurar estándar</button>}
             </div>
           </div>
 
@@ -1000,15 +1000,15 @@ export default function Generador() {
             <div className="relative flex-1 min-w-[200px]">
               <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar servicio, código o material…"
-                className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#3F72AC] focus:outline-none bg-white" />
+                className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white" />
             </div>
             <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
-              <input type="checkbox" checked={onlyIncluded} onChange={(e) => setOnlyIncluded(e.target.checked)} className="accent-[#2C568E]" />
+              <input type="checkbox" checked={onlyIncluded} onChange={(e) => setOnlyIncluded(e.target.checked)} className="accent-[#00589E]" />
               Sólo las del proyecto
             </label>
             <button onClick={() => setFiltersOpen(!filtersOpen)}
               className={`flex items-center gap-1.5 text-[12px] px-2.5 py-1.5 rounded-md border ${
-                activeFilterCount > 0 ? "border-[#2C568E] text-[#1F3F6E] bg-[#EAF3FB]" : "border-slate-200 text-slate-600 hover:border-[#7FC4EE]"
+                activeFilterCount > 0 ? "border-[#00589E] text-[#00406E] bg-[#EAF3FB]" : "border-slate-200 text-slate-600 hover:border-[#4DA8DC]"
               }`}>
               <Filter size={13} /> Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
               {filtersOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
