@@ -157,6 +157,7 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
             <div className="text-[10px] text-slate-600">Technical Specification{docMeta.client ? ` — Preparado para ${docMeta.client}` : ""}</div>
           </div>
           <div className="text-right text-[9px] font-mono">
+            <div className="text-[16px] font-bold text-slate-900 -mt-1 mb-0.5">{item.code}</div>
             <div>DOCUMENTO Nº: {docMeta.docNumber || "—"}</div>
             <div>REVISIÓN: {docMeta.revision || "0"}</div>
             <div>Clase {index + 1} de {total}</div>
@@ -195,12 +196,15 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
         {!d ? (
           <div className="border border-black p-3 text-[10px] flex items-start gap-2">
             <FileWarning size={14} className="shrink-0 mt-0.5" />
-            Esta clase no tiene el detalle de componentes/válvulas/ramificaciones transcripto todavía —
-            sólo se incluye el resumen. Consultar el documento fuente para el detalle completo.
+            <span><b className="font-mono">{item.code}</b>: esta clase no tiene el detalle de componentes/válvulas/ramificaciones transcripto todavía —
+            sólo se incluye el resumen. Consultar el documento fuente para el detalle completo.</span>
           </div>
         ) : (
           <>
-            <div className="bg-black text-white text-[10px] font-bold px-2 py-1 mb-1">PIPING CLASS COMPONENTS</div>
+            <div className="flex items-stretch mb-1">
+              <div className="bg-black text-white text-[10px] font-bold px-2 py-1 flex-1">PIPING CLASS COMPONENTS</div>
+              <div className="bg-black text-white text-[11px] font-bold px-3 py-1 flex items-center border-l border-slate-600">{item.code}</div>
+            </div>
             <PrintSpecTable cols={COMP_COLS} rows={d.comps} />
             {d.valves.length > 0 && <>
               <div className="bg-black text-white text-[10px] font-bold px-2 py-1 mb-1">VALVES</div>
