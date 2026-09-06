@@ -35,6 +35,7 @@ const TOOLS = [
     title: "Generador de piping class",
     desc: "Configuración y ensamblaje de clases de cañería y componentes pre-cargados según normativas vigentes (ASME B31.3).",
     icon: Settings,
+    accent: "#113044",
   },
   {
     id: "spec-builder",
@@ -42,6 +43,7 @@ const TOOLS = [
     title: "Armar especificación",
     desc: "Consolidación de clases de más de un proyecto para exportación y emisión de especificaciones en PDF.",
     icon: FileStack,
+    accent: "#00589E",
   },
   {
     id: "service-catalog",
@@ -49,6 +51,7 @@ const TOOLS = [
     title: "Catálogo de servicios",
     desc: "Todos los servicios cargados, de cualquier proyecto, agrupados por tipo, con descripción y codificación para documentos.",
     icon: Droplets,
+    accent: "#00406E",
   },
 ];
 
@@ -135,10 +138,23 @@ export default function Home({ onOpen }) {
             const active = t.status === "activo";
             const Icon = t.icon;
             return (
-              <div key={t.id} className={`rounded-md border p-5 transition-all duration-200 ${active ? "border-slate-200 bg-white hover:border-[#00589E] hover:-translate-y-0.5 hover:shadow-md" : "border-slate-200 bg-white/60"}`}>
+              <button
+                key={t.id}
+                disabled={!active}
+                onClick={() => active && onOpen(t.id)}
+                style={active ? { borderTopColor: t.accent } : undefined}
+                className={`group relative text-left rounded-md border border-t-[3px] p-5 transition-all duration-200 ${
+                  active
+                    ? "border-slate-200 bg-white hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                    : "border-slate-200 bg-white/60 cursor-default"
+                }`}
+              >
                 <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${active ? "bg-[#113044]" : "bg-slate-200"}`}>
-                    <Icon size={18} className={active ? "text-[#4DA8DC]" : "text-slate-400"} />
+                  <div
+                    className={`w-11 h-11 rounded-md flex items-center justify-center shrink-0 transition-transform duration-200 ${active ? "group-hover:scale-105" : "bg-slate-200"}`}
+                    style={active ? { backgroundColor: t.accent } : undefined}
+                  >
+                    <Icon size={20} className={active ? "text-[#4DA8DC]" : "text-slate-400"} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className={`text-[15px] font-semibold ${active ? "text-slate-900" : "text-slate-500"}`}>{t.title}</h3>
@@ -147,19 +163,15 @@ export default function Home({ onOpen }) {
                       <span className={`text-[10.5px] font-medium px-2 py-0.5 rounded ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
                         {t.status}
                       </span>
-                      <button
-                        disabled={!active}
-                        onClick={() => active && onOpen(t.id)}
-                        className={`flex items-center gap-0.5 text-[12.5px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded border ${
-                          active ? "border-[#00589E] text-[#00589E] hover:bg-[#00589E] hover:text-white" : "border-slate-200 text-slate-300 cursor-default"
-                        }`}
-                      >
-                        Abrir <ChevronRight size={13} />
-                      </button>
+                      {active && (
+                        <span className="flex items-center gap-0.5 text-[12.5px] font-semibold uppercase tracking-wide" style={{ color: t.accent }}>
+                          Abrir <ChevronRight size={14} className="transition-transform duration-200 group-hover:translate-x-1" />
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
