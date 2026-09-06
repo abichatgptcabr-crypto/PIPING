@@ -3,14 +3,16 @@ import {
   FileStack, Search, X, Printer, ArrowLeft, Building2, ShieldCheck, ShieldAlert,
   CheckSquare, Square, MinusSquare, FileWarning, Loader2, Save, FolderOpen, Trash2,
   FileSpreadsheet, Link2, Check, StickyNote, RotateCcw, Plus, LayoutTemplate,
-  Copy, ImagePlus,
+  Copy, ImagePlus, Pencil, Repeat, Users, Gauge, Table2, CircleDot,
 } from "lucide-react";
 import { FAMILIES, COMP_COLS, VALVE_COLS } from "../data/plants";
 import {
   fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, fetchSpecById, deleteSpec,
   fetchServiceCatalog, computeServiceCodes, markReviewed, clearReviewed,
   saveTemplate, fetchTemplates, fetchTemplateItems, deleteTemplate, uploadClientLogo,
+  fetchRevisionHistory, saveClientProfile, fetchClientProfiles, deleteClientProfile,
 } from "../lib/api";
+import { EditTable, DesignEdit } from "./Generador";
 import * as XLSX from "xlsx";
 import QRCode from "qrcode";
 
@@ -231,7 +233,7 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
   );
 }
 
-export function PrintCoverPage({ docMeta, items, qrDataUrl }) {
+export function PrintCoverPage({ docMeta, items, qrDataUrl, revisionHistory }) {
   return (
     <section className="print-page relative">
       <div className="border-2 border-black h-full flex flex-col relative" style={{ zIndex: 1 }}>
@@ -277,6 +279,30 @@ export function PrintCoverPage({ docMeta, items, qrDataUrl }) {
             </tbody>
           </table>
         </div>
+
+        {revisionHistory && revisionHistory.length > 0 && (
+          <div className="px-6 pb-4">
+            <div className="text-[10px] font-bold uppercase border-b border-black pb-1 mb-1.5">Historial de revisiones</div>
+            <table className="w-full text-[9px] font-mono">
+              <thead><tr className="border-b border-black">
+                <th className="text-left py-0.5 w-10">Rev.</th><th className="text-left py-0.5 w-20">Fecha</th>
+                <th className="text-left py-0.5">Descripción</th>
+                <th className="text-left py-0.5 w-28">Preparado</th><th className="text-left py-0.5 w-28">Aprobado</th>
+              </tr></thead>
+              <tbody>
+                {revisionHistory.map((r, i) => (
+                  <tr key={i} className="border-b border-slate-300">
+                    <td className="py-0.5 font-bold">{r.revision}</td>
+                    <td className="py-0.5">{r.date || "—"}</td>
+                    <td className="py-0.5">{r.change_note || "—"}</td>
+                    <td className="py-0.5">{r.prepared_by || "—"}</td>
+                    <td className="py-0.5">{r.approved_by || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 border-t-2 border-black text-[9px]">
           {[["PREPARADO POR", docMeta.preparedBy, docMeta.preparedDate],
@@ -342,6 +368,99 @@ export function ServiceIndexPage({ items, catalog, codes }) {
 }
 
 /* ═══════════════════════════════ Página principal ═══════════════════════ */
+const EDIT_TABS = [
+  { id: "cond", label: "Condiciones", icon: Gauge },
+  { id: "comp", label: "Componentes", icon: Table2 },
+  { id: "valv", label: "Válvulas", icon: CircleDot },
+  { id: "notes", label: "Notas", icon: StickyNote },
+];
+
+// Edición completa de una clase, pero SÓLO para este documento — nunca
+// toca la clase original del registro. onChange reemplaza el item entero
+// en el estado local del borrador.
+function EditForDocPanel({ item, onChange, onClose, onRestore }) {
+  const [tab, setTab] = useState("cond");
+  const d = item.detail;
+  if (!d) return null;
+  const setD = (patch) => onChange({ ...item, detail: { ...d, ...patch } });
+  const setField = (key, val) => onChange({ ...item, [key]: val });
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
+      <div className="w-full max-w-2xl h-full bg-white shadow-lg border border-slate-200 flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <div className="font-mono text-[18px] font-bold text-slate-900">{item.code}</div>
+            <div className="text-[12px] text-slate-500">Editando sólo para este documento — la clase original del registro no cambia</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onRestore} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#00589E]"><RotateCcw size={12} /> Restaurar original</button>
+            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400"><X size={18} /></button>
+          </div>
+        </div>
+        <div className="px-5 pt-3 grid grid-cols-3 gap-2 pb-3 border-b border-slate-200">
+          <input value={item.mat} onChange={(e) => setField("mat", e.target.value)} placeholder="Material" className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
+          <input value={item.corr} onChange={(e) => setField("corr", e.target.value)} placeholder="Corrosión" className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
+          <input value={item.rating} onChange={(e) => setField("rating", e.target.value)} placeholder="Rating" className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
+        </div>
+        <div className="px-5 pt-3 flex gap-1 border-b border-slate-200 overflow-x-auto">
+          {EDIT_TABS.map((t) => {
+            const Icon = t.icon; const active = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 py-2 text-[13px] whitespace-nowrap border-b-2 ${active ? "border-[#00589E] text-slate-900 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+                <Icon size={14} /> {t.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {tab === "cond" && <DesignEdit T={d.designT} P={d.designP} rating={item.rating} onChange={(T, P) => setD({ designT: T, designP: P })} />}
+          {tab === "comp" && <EditTable cols={COMP_COLS} rows={d.comps} onChange={(rows) => setD({ comps: rows })} />}
+          {tab === "valv" && <EditTable cols={VALVE_COLS} rows={d.valves} onChange={(rows) => setD({ valves: rows })} />}
+          {tab === "notes" && (
+            <div className="space-y-2">
+              {d.notes.map((n, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <span className="font-mono text-[12px] text-slate-400 mt-2">{i + 1}.</span>
+                  <textarea value={n} onChange={(e) => { const notes = d.notes.slice(); notes[i] = e.target.value; setD({ notes }); }} rows={2} className="flex-1 text-[13px] px-2 py-1.5 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none" />
+                  <button onClick={() => setD({ notes: d.notes.filter((_, k) => k !== i) })} className="text-slate-300 hover:text-red-500 mt-2"><X size={14} /></button>
+                </div>
+              ))}
+              <button onClick={() => setD({ notes: [...d.notes, ""] })} className="text-[12px] text-[#00406E] hover:text-[#113044] flex items-center gap-1"><Plus size={13} /> Agregar nota</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Mini selector cross-planta para "Cambiar por..." — reemplaza una clase
+// del borrador por otra, en el mismo lugar de la lista.
+function ReplacePicker({ plants, onPick, onCancel }) {
+  const [plantId, setPlantId] = useState(plants[0]?.id || "");
+  const [code, setCode] = useState("");
+  const plant = plants.find((p) => p.id === plantId);
+  const selStyle = "flex-1 text-[12px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white";
+  return (
+    <div className="flex gap-1.5 items-center px-2 pb-2">
+      <select value={plantId} onChange={(e) => { setPlantId(e.target.value); setCode(""); }} className={selStyle}>
+        {plants.map((p) => <option key={p.id} value={p.id}>{p.name.split(" · ")[0]}</option>)}
+      </select>
+      <select value={code} onChange={(e) => setCode(e.target.value)} className={selStyle}>
+        <option value="">Elegí clase…</option>
+        {plant?.classes.map((k) => <option key={k.id} value={k.code}>{k.code}</option>)}
+      </select>
+      <button
+        disabled={!code}
+        onClick={() => onPick(plant, plant.classes.find((k) => k.code === code))}
+        className="text-[12px] px-2 py-1.5 rounded-md bg-[#00589E] text-white disabled:opacity-40"
+      ><Check size={13} /></button>
+      <button onClick={onCancel} className="text-slate-400 hover:text-red-500 px-1"><X size={14} /></button>
+    </div>
+  );
+}
+
 export default function SpecBuilder() {
   const [plants, setPlants] = useState([]);
   const [ready, setReady] = useState(false);
@@ -357,7 +476,7 @@ export default function SpecBuilder() {
     title: "Piping Class", project: "", client: "", docNumber: "", revision: "0",
     company: "Hytech", confidential: true, serviceCoding: true, date: new Date().toLocaleDateString("es-AR"),
     preparedBy: "", preparedDate: "", checkedBy: "", checkedDate: "", approvedBy: "", approvedDate: "",
-    clientLogoUrl: "",
+    clientLogoUrl: "", changeNote: "",
   });
   const [serviceCatalog, setServiceCatalog] = useState([]);
   const [currentSpecId, setCurrentSpecId] = useState(null);
@@ -368,12 +487,25 @@ export default function SpecBuilder() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [editingFullFor, setEditingFullFor] = useState(null);
+  const [replacingId, setReplacingId] = useState(null);
+  const [bulkNote, setBulkNote] = useState("");
+  const [revisionHistory, setRevisionHistory] = useState([]);
+  const [clientProfiles, setClientProfiles] = useState(null);
+  const [showClientProfiles, setShowClientProfiles] = useState(false);
+  const [savingClientProfile, setSavingClientProfile] = useState(false);
 
   useEffect(() => {
     fetchAllPlants().then((data) => { setPlants(data); setReady(true); }).catch(() => setReady(true));
     fetchServiceCatalog().then(setServiceCatalog).catch(() => setServiceCatalog([]));
   }, []);
   const serviceCodes = useMemo(() => computeServiceCodes(serviceCatalog), [serviceCatalog]);
+
+  // Historial de revisiones del documento (mismo N°) — para la tabla de
+  // control de cambios en la portada.
+  useEffect(() => {
+    fetchRevisionHistory(docMeta.docNumber).then(setRevisionHistory).catch(() => setRevisionHistory([]));
+  }, [docMeta.docNumber]);
 
   // Código QR de verificación — sólo existe una vez que la spec está
   // guardada (necesita un id real para armar el link).
@@ -416,13 +548,61 @@ export default function SpecBuilder() {
   };
   const remove = (itemId) => setSelected((sel) => sel.filter((s) => s.item.id !== itemId));
 
-  const [editingNotesFor, setEditingNotesFor] = useState(null);
-  const setNotesFor = (itemId, notes) =>
-    setSelected((sel) => sel.map((s) => s.item.id === itemId
-      ? { ...s, item: { ...s.item, detail: { ...s.item.detail, notes } } } : s));
-  const restoreNotes = (itemId) => {
+  // Edición completa por documento — reemplaza el item local del borrador,
+  // nunca toca la clase original del registro.
+  const updateSelectedItem = (itemId, newItem) =>
+    setSelected((sel) => sel.map((s) => (s.item.id === itemId ? { ...s, item: newItem } : s)));
+  const restoreItem = (itemId) => {
     const master = plants.flatMap((p) => p.classes).find((k) => k.id === itemId);
-    if (master?.detail) setNotesFor(itemId, master.detail.notes);
+    if (master) updateSelectedItem(itemId, { ...master });
+  };
+
+  // "Cambiar por..." — reemplaza una clase del borrador por otra, en el
+  // mismo lugar de la lista.
+  const replaceItem = (oldId, plant, newClass) => {
+    setSelected((sel) => sel.map((s) => (s.item.id === oldId ? { plantId: plant.id, plantName: plant.name, item: newClass } : s)));
+    setReplacingId(null);
+  };
+
+  // Nota en bloque: agrega la misma nota a todas las clases del borrador
+  // que tengan detalle cargado — para requisitos que aplican al documento
+  // entero, sin entrar clase por clase.
+  const applyBulkNote = () => {
+    if (!bulkNote.trim()) return;
+    setSelected((sel) => sel.map((s) => (s.item.detail
+      ? { ...s, item: { ...s.item, detail: { ...s.item.detail, notes: [...s.item.detail.notes, bulkNote.trim()] } } }
+      : s)));
+    setBulkNote("");
+  };
+
+  /* ═══════════════════════ Perfiles de cliente ═══════════════════════════ */
+  const openClientProfiles = async () => {
+    setShowClientProfiles(true);
+    if (clientProfiles === null) {
+      try { setClientProfiles(await fetchClientProfiles()); } catch { setClientProfiles([]); }
+    }
+  };
+  const useClientProfile = (p) => {
+    setDocMeta((d) => ({ ...d, client: p.name, clientLogoUrl: p.logo_url || "" }));
+    setShowClientProfiles(false);
+  };
+  const removeClientProfile = async (id) => {
+    await deleteClientProfile(id);
+    setClientProfiles((c) => c.filter((x) => x.id !== id));
+  };
+  const confirmSaveClientProfile = async () => {
+    if (!docMeta.client.trim()) return;
+    setSavingClientProfile(true);
+    try {
+      await saveClientProfile(docMeta.client.trim(), docMeta.clientLogoUrl);
+      setClientProfiles(null);
+      setSavedMsg("Perfil de cliente guardado.");
+      setTimeout(() => setSavedMsg(""), 2500);
+    } catch (e) {
+      setSavedMsg("No se pudo guardar el perfil: " + e.message);
+    } finally {
+      setSavingClientProfile(false);
+    }
   };
 
   const toggleReviewed = async (s) => {
@@ -479,6 +659,7 @@ export default function SpecBuilder() {
     try {
       const spec = await saveSpec(docMeta, selected);
       setCurrentSpecId(spec.id);
+      fetchRevisionHistory(docMeta.docNumber).then(setRevisionHistory).catch(() => {});
       setSavedMsg("Especificación guardada.");
       setTimeout(() => setSavedMsg(""), 2500);
     } catch (e) {
@@ -512,7 +693,7 @@ export default function SpecBuilder() {
       preparedBy: spec.prepared_by || "", preparedDate: spec.prepared_date || "",
       checkedBy: spec.checked_by || "", checkedDate: spec.checked_date || "",
       approvedBy: spec.approved_by || "", approvedDate: spec.approved_date || "",
-      clientLogoUrl: spec.client_logo_url || "",
+      clientLogoUrl: spec.client_logo_url || "", changeNote: "",
     });
     applyRows(rows);
     setCurrentSpecId(spec.id);
@@ -530,7 +711,7 @@ export default function SpecBuilder() {
       confidential: spec.confidential, serviceCoding: spec.service_coding,
       date: new Date().toLocaleDateString("es-AR"),
       preparedBy: "", preparedDate: "", checkedBy: "", checkedDate: "", approvedBy: "", approvedDate: "",
-      clientLogoUrl: spec.client_logo_url || "",
+      clientLogoUrl: spec.client_logo_url || "", changeNote: "",
     }));
     applyRows(rows);
     setCurrentSpecId(null);
@@ -609,7 +790,7 @@ export default function SpecBuilder() {
           </button>
         </div>
         <div className="max-w-[850px] mx-auto py-6 print:py-0 print:max-w-none">
-          <PrintCoverPage docMeta={docMeta} items={selected} qrDataUrl={qrDataUrl} />
+          <PrintCoverPage docMeta={docMeta} items={selected} qrDataUrl={qrDataUrl} revisionHistory={revisionHistory} />
           {selected.map((s, i) => (
             <PrintClassPage key={s.item.id} item={s.item} plantName={s.plantName} docMeta={docMeta} index={i} total={selected.length} />
           ))}
@@ -665,7 +846,7 @@ export default function SpecBuilder() {
             <div className="text-[12px] font-semibold text-slate-700 mb-3">Datos del documento</div>
             <div className="space-y-2">
               {[
-                ["title", "Título"], ["project", "Proyecto"], ["client", "Cliente destinatario"],
+                ["title", "Título"], ["project", "Proyecto"],
                 ["docNumber", "N° de documento"], ["revision", "Revisión"], ["company", "Empresa"], ["date", "Fecha"],
               ].map(([key, label]) => (
                 <div key={key}>
@@ -673,10 +854,34 @@ export default function SpecBuilder() {
                   <input value={docMeta[key]} onChange={(e) => setDocMeta({ ...docMeta, [key]: e.target.value })}
                     className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
                   {key === "docNumber" && (
-                    <div className="text-[10.5px] text-slate-400 mt-1 leading-snug">Si este N° de documento ya existe entre las specs guardadas, "Guardar" agrega una revisión nueva — no pisa la anterior.</div>
+                    <div className="text-[10.5px] text-slate-400 mt-1 leading-snug">
+                      Si este N° de documento ya existe entre las specs guardadas, "Guardar" agrega una revisión nueva — no pisa la anterior.
+                      {revisionHistory.length > 0 && <span> Ya tiene {revisionHistory.length} {revisionHistory.length === 1 ? "revisión guardada" : "revisiones guardadas"}.</span>}
+                    </div>
                   )}
                 </div>
               ))}
+              {revisionHistory.length > 0 && (
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400">Motivo de esta revisión</label>
+                  <input value={docMeta.changeNote} onChange={(e) => setDocMeta({ ...docMeta, changeNote: e.target.value })} placeholder="Ej: se agrega clase de agua contra incendio"
+                    className="w-full text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
+                </div>
+              )}
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400">Cliente destinatario</label>
+                  <button onClick={openClientProfiles} className="text-[10.5px] text-[#00589E] hover:text-[#00406E] flex items-center gap-1"><Users size={11} /> Perfiles</button>
+                </div>
+                <div className="flex gap-1.5">
+                  <input value={docMeta.client} onChange={(e) => setDocMeta({ ...docMeta, client: e.target.value })}
+                    className="flex-1 text-[13px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
+                  <button onClick={confirmSaveClientProfile} disabled={!docMeta.client.trim() || savingClientProfile} title="Guardar como perfil de cliente reutilizable"
+                    className="text-[12px] px-2 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#00589E] disabled:opacity-40">
+                    {savingClientProfile ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  </button>
+                </div>
+              </div>
               <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
                 <input type="checkbox" checked={docMeta.serviceCoding} onChange={(e) => setDocMeta({ ...docMeta, serviceCoding: e.target.checked })} className="accent-[#00589E]" />
                 Agregar índice de servicios codificado al final del PDF
@@ -746,8 +951,15 @@ export default function SpecBuilder() {
           <div className="rounded-md border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[12px] font-semibold text-slate-700">Borrador ({selected.length})</span>
-              <span className="text-[10.5px] text-slate-400 flex items-center gap-1"><ShieldAlert size={11} /> tocá el ícono para marcar revisada</span>
+              <span className="text-[10.5px] text-slate-400 flex items-center gap-1"><ShieldAlert size={11} /> tocá el escudo para marcar revisada</span>
             </div>
+            {selected.length > 0 && (
+              <div className="flex gap-1.5 mb-3">
+                <input value={bulkNote} onChange={(e) => setBulkNote(e.target.value)} placeholder="Nota para todas las clases del documento…"
+                  className="flex-1 text-[12px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none" />
+                <button onClick={applyBulkNote} disabled={!bulkNote.trim()} className="text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#00589E] disabled:opacity-40 whitespace-nowrap">Agregar a todas</button>
+              </div>
+            )}
             {selected.length === 0 ? (
               <div className="text-[12px] text-slate-400">Todavía no elegiste ninguna clase.</div>
             ) : (
@@ -758,14 +970,13 @@ export default function SpecBuilder() {
                       <span className="min-w-0 truncate"><span className="font-mono font-semibold">{s.item.code}</span> <span className="text-slate-400">· {s.plantName.split(" · ")[0]}</span></span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {s.item.detail && (
-                          <button
-                            onClick={() => setEditingNotesFor(editingNotesFor === s.item.id ? null : s.item.id)}
-                            title="Editar notas para este documento"
-                            className={editingNotesFor === s.item.id ? "text-[#00589E]" : "text-slate-300 hover:text-[#00589E]"}
-                          >
-                            <StickyNote size={14} />
+                          <button onClick={() => setEditingFullFor(s.item.id)} title="Editar para este documento" className="text-slate-300 hover:text-[#00589E]">
+                            <Pencil size={13} />
                           </button>
                         )}
+                        <button onClick={() => setReplacingId(replacingId === s.item.id ? null : s.item.id)} title="Cambiar por otra clase" className={replacingId === s.item.id ? "text-[#00589E]" : "text-slate-300 hover:text-[#00589E]"}>
+                          <Repeat size={13} />
+                        </button>
                         <button
                           onClick={() => toggleReviewed(s)}
                           title={s.item.reviewedBy ? `Revisado por ${s.item.reviewedBy}` : "Marcar como revisado"}
@@ -776,32 +987,8 @@ export default function SpecBuilder() {
                         <button onClick={() => remove(s.item.id)} className="text-slate-300 hover:text-red-500"><X size={13} /></button>
                       </div>
                     </div>
-                    {editingNotesFor === s.item.id && s.item.detail && (
-                      <div className="px-2 pb-2.5 space-y-1.5 border-t border-slate-200 pt-2">
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Notas para este documento (no afecta la clase original)</div>
-                        {s.item.detail.notes.map((n, i) => (
-                          <div key={i} className="flex gap-1.5 items-start">
-                            <span className="text-[10px] font-mono text-slate-400 mt-1.5 shrink-0">{i + 1}.</span>
-                            <textarea
-                              value={n} rows={2}
-                              onChange={(e) => {
-                                const notes = s.item.detail.notes.slice();
-                                notes[i] = e.target.value;
-                                setNotesFor(s.item.id, notes);
-                              }}
-                              className="flex-1 text-[11.5px] px-1.5 py-1 border border-slate-200 rounded focus:border-[#00589E] focus:outline-none bg-white"
-                            />
-                            <button
-                              onClick={() => setNotesFor(s.item.id, s.item.detail.notes.filter((_, k) => k !== i))}
-                              className="text-slate-300 hover:text-red-500 mt-1.5 shrink-0"
-                            ><X size={12} /></button>
-                          </div>
-                        ))}
-                        <div className="flex items-center justify-between pt-0.5">
-                          <button onClick={() => setNotesFor(s.item.id, [...s.item.detail.notes, ""])} className="text-[11px] text-[#00406E] hover:text-[#173257] flex items-center gap-1"><Plus size={11} /> Agregar nota</button>
-                          <button onClick={() => restoreNotes(s.item.id)} className="text-[11px] text-slate-500 hover:text-slate-700 flex items-center gap-1"><RotateCcw size={11} /> Restaurar originales</button>
-                        </div>
-                      </div>
+                    {replacingId === s.item.id && (
+                      <ReplacePicker plants={plants} onCancel={() => setReplacingId(null)} onPick={(plant, cls) => replaceItem(s.item.id, plant, cls)} />
                     )}
                   </div>
                 ))}
@@ -909,6 +1096,46 @@ export default function SpecBuilder() {
           </div>
         </div>
       )}
+
+      {showClientProfiles && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40" onClick={() => setShowClientProfiles(false)}>
+          <div className="bg-white rounded-md shadow-lg border border-slate-200 w-full max-w-lg max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <span className="text-[14px] font-semibold text-slate-800">Perfiles de cliente</span>
+              <button onClick={() => setShowClientProfiles(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="p-3 space-y-1.5">
+              {clientProfiles === null ? (
+                <div className="text-[13px] text-slate-400 flex items-center gap-2 px-2 py-3"><Loader2 size={14} className="animate-spin" /> Cargando…</div>
+              ) : clientProfiles.length === 0 ? (
+                <div className="text-[13px] text-slate-400 px-2 py-3">Todavía no guardaste ningún perfil. Completá "Cliente destinatario" (y opcionalmente el logo) y tocá el ícono de guardar al lado del campo.</div>
+              ) : (
+                clientProfiles.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-md hover:bg-slate-50">
+                    <button onClick={() => useClientProfile(p)} className="flex items-center gap-2 text-left min-w-0 flex-1">
+                      {p.logo_url ? <img src={p.logo_url} alt={p.name} className="h-6 w-auto object-contain" /> : <Users size={16} className="text-slate-300" />}
+                      <span className="text-[13px] font-medium text-slate-800 truncate">{p.name}</span>
+                    </button>
+                    <button onClick={() => removeClientProfile(p.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingFullFor && (() => {
+        const entry = selected.find((s) => s.item.id === editingFullFor);
+        return entry ? (
+          <EditForDocPanel
+            item={entry.item}
+            onChange={(newItem) => updateSelectedItem(editingFullFor, newItem)}
+            onClose={() => setEditingFullFor(null)}
+            onRestore={() => restoreItem(editingFullFor)}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

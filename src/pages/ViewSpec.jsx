@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Printer, Loader2, FileWarning } from "lucide-react";
-import { fetchSpecById, fetchSpecItems, fetchServiceCatalog, computeServiceCodes } from "../lib/api";
+import { fetchSpecById, fetchSpecItems, fetchServiceCatalog, computeServiceCodes, fetchRevisionHistory } from "../lib/api";
 import { PrintCoverPage, PrintClassPage, ServiceIndexPage } from "./SpecBuilder";
 import QRCode from "qrcode";
 
@@ -11,6 +11,7 @@ export default function ViewSpec({ specId }) {
   const [state, setState] = useState({ loading: true, error: "", docMeta: null, items: [] });
   const [catalog, setCatalog] = useState([]);
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [revisionHistory, setRevisionHistory] = useState([]);
 
   useEffect(() => {
     fetchServiceCatalog().then(setCatalog).catch(() => setCatalog([]));
@@ -40,6 +41,7 @@ export default function ViewSpec({ specId }) {
           },
           items: rows.map((r) => (r.plantName ? r : { plantName: "—", item: r.item })),
         });
+        fetchRevisionHistory(spec.doc_number).then(setRevisionHistory).catch(() => setRevisionHistory([]));
       } catch (e) {
         setState({ loading: false, error: "No se encontró esa especificación (puede haber sido borrada, o el link está mal copiado).", docMeta: null, items: [] });
       }
@@ -67,7 +69,7 @@ export default function ViewSpec({ specId }) {
         </button>
       </div>
       <div className="max-w-[850px] mx-auto py-6 print:py-0 print:max-w-none">
-        <PrintCoverPage docMeta={state.docMeta} items={state.items} qrDataUrl={qrDataUrl} />
+        <PrintCoverPage docMeta={state.docMeta} items={state.items} qrDataUrl={qrDataUrl} revisionHistory={revisionHistory} />
         {state.items.map((s, i) => (
           <PrintClassPage key={s.item.id} item={s.item} plantName={s.plantName} docMeta={state.docMeta} index={i} total={state.items.length} />
         ))}

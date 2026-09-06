@@ -53,7 +53,7 @@ function SpecTable({ cols, rows }) {
   );
 }
 
-function EditTable({ cols, rows, onChange }) {
+export function EditTable({ cols, rows, onChange }) {
   const upd = (i, j, val) => { const n = rows.map((r) => r.slice()); n[i][j] = val; onChange(n); };
   return (
     <div className="space-y-2">
@@ -352,7 +352,7 @@ function DesignView({ T, P, rating }) {
     </div>
   );
 }
-function DesignEdit({ T, P, onChange, rating }) {
+export function DesignEdit({ T, P, onChange, rating }) {
   const setT = (i, val) => { const t = T.slice(); t[i] = val; onChange(t, P); };
   const setP = (i, val) => { const p = P.slice(); p[i] = val; onChange(T, p); };
   return (
