@@ -2,11 +2,17 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   FileStack, Search, X, Printer, ArrowLeft, Building2, ShieldCheck, ShieldAlert,
   CheckSquare, Square, MinusSquare, FileWarning, Loader2, Save, FolderOpen, Trash2,
-  FileSpreadsheet, Link2, Check, StickyNote, RotateCcw, Plus,
+  FileSpreadsheet, Link2, Check, StickyNote, RotateCcw, Plus, LayoutTemplate,
+  Copy, ImagePlus,
 } from "lucide-react";
 import { FAMILIES, COMP_COLS, VALVE_COLS } from "../data/plants";
-import { fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, fetchSpecById, deleteSpec, fetchServiceCatalog, computeServiceCodes, markReviewed, clearReviewed } from "../lib/api";
+import {
+  fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, fetchSpecById, deleteSpec,
+  fetchServiceCatalog, computeServiceCodes, markReviewed, clearReviewed,
+  saveTemplate, fetchTemplates, fetchTemplateItems, deleteTemplate, uploadClientLogo,
+} from "../lib/api";
 import * as XLSX from "xlsx";
+import QRCode from "qrcode";
 
 /* ═══════════════════════════ Selector cross-planta ═══════════════════════ */
 function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
@@ -226,13 +232,17 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
   );
 }
 
-export function PrintCoverPage({ docMeta, items }) {
+export function PrintCoverPage({ docMeta, items, qrDataUrl }) {
   return (
     <section className="print-page relative">
       {docMeta.confidential && <Watermark />}
       <div className="border-2 border-black h-full flex flex-col relative" style={{ zIndex: 1 }}>
         <div className="border-b-2 border-black p-6 text-center">
-          <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-2">{docMeta.company || "Hytech"}</div>
+          {docMeta.clientLogoUrl ? (
+            <img src={docMeta.clientLogoUrl} alt={docMeta.client || "Cliente"} className="h-14 mx-auto mb-3 object-contain" />
+          ) : (
+            <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-2">{docMeta.company || "Hytech"}</div>
+          )}
           <div className="text-[26px] font-bold uppercase mb-1">{docMeta.title || "Piping Class"}</div>
           <div className="text-[13px] text-slate-600">Technical Specification</div>
           {docMeta.client && <div className="text-[12px] text-slate-500 mt-1">Preparado para: <b>{docMeta.client}</b></div>}
@@ -270,8 +280,31 @@ export function PrintCoverPage({ docMeta, items }) {
             </tbody>
           </table>
         </div>
-        <div className="p-3 text-[9px] text-slate-400 border-t border-black">
-          Documento armado con el Generador de piping class de Hytech Tools — combina clases de más de un proyecto/estándar base. Verificar compatibilidad de códigos, condiciones de diseño y estado de revisión de cada clase antes de emitir para construcción.
+
+        <div className="grid grid-cols-3 border-t-2 border-black text-[9px]">
+          {[["PREPARADO POR", docMeta.preparedBy, docMeta.preparedDate],
+            ["REVISADO POR", docMeta.checkedBy, docMeta.checkedDate],
+            ["APROBADO POR", docMeta.approvedBy, docMeta.approvedDate]].map(([label, name, date], i) => (
+            <div key={label} className={`p-3 ${i < 2 ? "border-r border-black" : ""}`}>
+              <div className="uppercase tracking-wider text-slate-500 mb-3">{label}</div>
+              <div className="border-b border-slate-400 pb-1 mb-1 min-h-[14px] font-medium">{name || ""}</div>
+              <div className="text-slate-400">{date ? `Fecha: ${date}` : "Nombre y fecha"}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 p-3 text-[9px] text-slate-400 border-t border-black">
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt="Código QR de verificación" className="w-14 h-14 shrink-0" />
+          ) : (
+            <div className="w-14 h-14 shrink-0 border border-dashed border-slate-300 flex items-center justify-center text-center text-[7px] text-slate-300 leading-tight px-1">
+              QR al guardar
+            </div>
+          )}
+          <div>
+            Documento armado con el Generador de piping class de Hytech Tools — combina clases de más de un proyecto/estándar base. Verificar compatibilidad de códigos, condiciones de diseño y estado de revisión de cada clase antes de emitir para construcción.
+            {qrDataUrl && <div className="mt-1">Escaneá el código para ver la versión online de este documento.</div>}
+          </div>
         </div>
       </div>
     </section>
@@ -329,14 +362,32 @@ export default function SpecBuilder() {
   const [docMeta, setDocMeta] = useState({
     title: "Piping Class", project: "", client: "", docNumber: "", revision: "0",
     company: "Hytech", confidential: true, serviceCoding: true, date: new Date().toLocaleDateString("es-AR"),
+    preparedBy: "", preparedDate: "", checkedBy: "", checkedDate: "", approvedBy: "", approvedDate: "",
+    clientLogoUrl: "",
   });
   const [serviceCatalog, setServiceCatalog] = useState([]);
+  const [currentSpecId, setCurrentSpecId] = useState(null);
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [templates, setTemplates] = useState(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
 
   useEffect(() => {
     fetchAllPlants().then((data) => { setPlants(data); setReady(true); }).catch(() => setReady(true));
     fetchServiceCatalog().then(setServiceCatalog).catch(() => setServiceCatalog([]));
   }, []);
   const serviceCodes = useMemo(() => computeServiceCodes(serviceCatalog), [serviceCatalog]);
+
+  // Código QR de verificación — sólo existe una vez que la spec está
+  // guardada (necesita un id real para armar el link).
+  useEffect(() => {
+    if (!currentSpecId) { setQrDataUrl(""); return; }
+    const url = `${window.location.origin}${window.location.pathname}?spec=${currentSpecId}`;
+    QRCode.toDataURL(url, { margin: 1, width: 160 }).then(setQrDataUrl).catch(() => setQrDataUrl(""));
+  }, [currentSpecId]);
 
   const selectedIds = useMemo(() => new Set(selected.map((s) => s.item.id)), [selected]);
 
@@ -432,7 +483,8 @@ export default function SpecBuilder() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveSpec(docMeta, selected);
+      const spec = await saveSpec(docMeta, selected);
+      setCurrentSpecId(spec.id);
       setSavedMsg("Especificación guardada.");
       setTimeout(() => setSavedMsg(""), 2500);
     } catch (e) {
@@ -449,25 +501,107 @@ export default function SpecBuilder() {
     }
   };
 
+  const applyRows = (rows) => setSelected(rows.map((r) => {
+    if (r.plantName) return r; // ya viene completo desde la foto congelada
+    const plant = plants.find((p) => p.classes.some((k) => k.id === r.item.id));
+    return { plantId: plant?.id || "—", plantName: plant?.name || "—", item: r.item };
+  }));
+
+  // Cargar una revisión: se sigue editando la MISMA spec (guardar de nuevo
+  // agrega otra revisión con el mismo N° de documento).
   const loadSpec = async (spec) => {
     const rows = await fetchSpecItems(spec.id);
     setDocMeta({
       title: spec.title, project: spec.project, client: spec.client || "",
       docNumber: spec.doc_number, revision: spec.revision, company: spec.company,
       confidential: spec.confidential, serviceCoding: spec.service_coding, date: spec.date,
+      preparedBy: spec.prepared_by || "", preparedDate: spec.prepared_date || "",
+      checkedBy: spec.checked_by || "", checkedDate: spec.checked_date || "",
+      approvedBy: spec.approved_by || "", approvedDate: spec.approved_date || "",
+      clientLogoUrl: spec.client_logo_url || "",
     });
-    setSelected(rows.map((r) => {
-      if (r.plantName) return r; // ya viene completo desde la foto congelada
-      const plant = plants.find((p) => p.classes.some((k) => k.id === r.item.id));
-      return { plantId: plant?.id || "—", plantName: plant?.name || "—", item: r.item };
-    }));
+    applyRows(rows);
+    setCurrentSpecId(spec.id);
     setShowSaved(false);
+  };
+
+  // "Usar como base para documento nuevo": mismo contenido, pero limpia el
+  // N° de documento y la revisión — al guardar, nace un documento nuevo,
+  // no una revisión más del que se copió.
+  const duplicateAsNew = async (spec) => {
+    const rows = await fetchSpecItems(spec.id);
+    setDocMeta((d) => ({
+      ...d, title: spec.title, project: spec.project, client: spec.client || "",
+      docNumber: "", revision: "0", company: spec.company,
+      confidential: spec.confidential, serviceCoding: spec.service_coding,
+      date: new Date().toLocaleDateString("es-AR"),
+      preparedBy: "", preparedDate: "", checkedBy: "", checkedDate: "", approvedBy: "", approvedDate: "",
+      clientLogoUrl: spec.client_logo_url || "",
+    }));
+    applyRows(rows);
+    setCurrentSpecId(null);
+    setShowSaved(false);
+    setSavedMsg("Copiado como base — completá el N° de documento y guardá para crear el nuevo.");
+    setTimeout(() => setSavedMsg(""), 4000);
   };
 
   const removeSaved = async (id) => {
     await deleteSpec(id);
     setSavedSpecs((s) => s.filter((x) => x.id !== id));
   };
+
+  /* ═══════════════════════ Plantillas de selección ═══════════════════════ */
+  const openTemplates = async () => {
+    setShowTemplates(true);
+    if (templates === null) {
+      try { setTemplates(await fetchTemplates()); } catch { setTemplates([]); }
+    }
+  };
+  const useTemplate = async (tpl) => {
+    const rows = await fetchTemplateItems(tpl.id);
+    setSelected(rows.map((c) => {
+      const plant = plants.find((p) => p.classes.some((k) => k.id === c.id));
+      return { plantId: plant?.id || "—", plantName: plant?.name || "—", item: c };
+    }));
+    setShowTemplates(false);
+  };
+  const removeTemplate = async (id) => {
+    await deleteTemplate(id);
+    setTemplates((t) => t.filter((x) => x.id !== id));
+  };
+  const confirmSaveTemplate = async () => {
+    if (!templateName.trim()) return;
+    setSavingTemplate(true);
+    try {
+      await saveTemplate(templateName.trim(), "", selected);
+      setShowTemplateForm(false);
+      setTemplateName("");
+      setTemplates(null); // fuerza recarga la próxima vez que se abra la lista
+      setSavedMsg("Plantilla guardada.");
+      setTimeout(() => setSavedMsg(""), 2500);
+    } catch (e) {
+      setSavedMsg("No se pudo guardar la plantilla: " + e.message);
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  /* ═══════════════════════ Logo del cliente ═══════════════════════════════ */
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const url = await uploadClientLogo(file);
+      setDocMeta((d) => ({ ...d, clientLogoUrl: url }));
+    } catch (err) {
+      setSavedMsg("No se pudo subir el logo: " + err.message);
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
+
 
   if (mode === "print") {
     return (
@@ -481,7 +615,7 @@ export default function SpecBuilder() {
           </button>
         </div>
         <div className="max-w-[850px] mx-auto py-6 print:py-0 print:max-w-none">
-          <PrintCoverPage docMeta={docMeta} items={selected} />
+          <PrintCoverPage docMeta={docMeta} items={selected} qrDataUrl={qrDataUrl} />
           {selected.map((s, i) => (
             <PrintClassPage key={s.item.id} item={s.item} plantName={s.plantName} docMeta={docMeta} index={i} total={selected.length} />
           ))}
@@ -554,7 +688,66 @@ export default function SpecBuilder() {
                 <input type="checkbox" checked={docMeta.serviceCoding} onChange={(e) => setDocMeta({ ...docMeta, serviceCoding: e.target.checked })} className="accent-[#2C568E]" />
                 Agregar índice de servicios codificado al final del PDF
               </label>
+
+              <div className="pt-2 border-t border-slate-100">
+                <label className="text-[10px] uppercase tracking-wider text-slate-400">Logo del cliente (portada)</label>
+                {docMeta.clientLogoUrl ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <img src={docMeta.clientLogoUrl} alt="Logo cliente" className="h-8 object-contain border border-slate-200 rounded px-1" />
+                    <button onClick={() => setDocMeta({ ...docMeta, clientLogoUrl: "" })} className="text-[11px] text-slate-400 hover:text-red-500">Quitar</button>
+                  </div>
+                ) : (
+                  <label className="mt-1 flex items-center gap-1.5 text-[12px] px-2.5 py-1.5 rounded-md border border-dashed border-slate-300 text-slate-500 hover:border-[#7FC4EE] cursor-pointer w-fit">
+                    {uploadingLogo ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+                    {uploadingLogo ? "Subiendo…" : "Subir logo"}
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="hidden" />
+                  </label>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="text-[10px] uppercase tracking-wider text-slate-400">Firmas del documento</div>
+                {[
+                  ["preparedBy", "preparedDate", "Preparado por"],
+                  ["checkedBy", "checkedDate", "Revisado por"],
+                  ["approvedBy", "approvedDate", "Aprobado por"],
+                ].map(([nameKey, dateKey, label]) => (
+                  <div key={nameKey} className="grid grid-cols-[1fr_100px] gap-1.5">
+                    <input value={docMeta[nameKey]} onChange={(e) => setDocMeta({ ...docMeta, [nameKey]: e.target.value })}
+                      placeholder={label} className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
+                    <input value={docMeta[dateKey]} onChange={(e) => setDocMeta({ ...docMeta, [dateKey]: e.target.value })}
+                      placeholder="Fecha" className="text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
+                  </div>
+                ))}
+              </div>
             </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[12px] font-semibold text-slate-700">Plantillas</span>
+              <button onClick={openTemplates} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#1F3F6E]">
+                <LayoutTemplate size={14} /> Usar plantilla
+              </button>
+            </div>
+            {!showTemplateForm ? (
+              <button
+                disabled={selected.length === 0}
+                onClick={() => setShowTemplateForm(true)}
+                className="w-full flex items-center justify-center gap-1.5 text-[12.5px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#7FC4EE] disabled:opacity-50"
+              >
+                <Save size={13} /> Guardar esta selección como plantilla
+              </button>
+            ) : (
+              <div className="flex gap-1.5">
+                <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Nombre de la plantilla…" autoFocus
+                  className="flex-1 text-[12.5px] px-2 py-1.5 border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none" />
+                <button onClick={confirmSaveTemplate} disabled={savingTemplate || !templateName.trim()} className="px-2.5 py-1.5 rounded-md bg-[#2C568E] text-white disabled:opacity-50">
+                  {savingTemplate ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                </button>
+                <button onClick={() => { setShowTemplateForm(false); setTemplateName(""); }} className="px-2 text-slate-400 hover:text-red-500"><X size={14} /></button>
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -681,10 +874,41 @@ export default function SpecBuilder() {
                           <button onClick={() => copyShareLink(s.id)} title="Copiar link para compartir (solo lectura)" className="text-slate-300 hover:text-[#2C568E] shrink-0">
                             {copiedId === s.id ? <Check size={14} className="text-emerald-600" /> : <Link2 size={14} />}
                           </button>
+                          <button onClick={() => duplicateAsNew(s)} title="Usar como base para un documento nuevo" className="text-slate-300 hover:text-[#2C568E] shrink-0">
+                            <Copy size={14} />
+                          </button>
                           <button onClick={() => removeSaved(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>
                         </div>
                       ))}
                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTemplates && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40" onClick={() => setShowTemplates(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <span className="text-[14px] font-semibold text-slate-800">Plantillas guardadas</span>
+              <button onClick={() => setShowTemplates(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="p-3 space-y-1.5">
+              {templates === null ? (
+                <div className="text-[13px] text-slate-400 flex items-center gap-2 px-2 py-3"><Loader2 size={14} className="animate-spin" /> Cargando…</div>
+              ) : templates.length === 0 ? (
+                <div className="text-[13px] text-slate-400 px-2 py-3">Todavía no guardaste ninguna plantilla. Elegí algunas clases y usá "Guardar esta selección como plantilla".</div>
+              ) : (
+                templates.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-md hover:bg-slate-50">
+                    <button onClick={() => useTemplate(t)} className="text-left min-w-0 flex-1">
+                      <div className="text-[13px] font-medium text-slate-800 truncate">{t.name}</div>
+                      <div className="text-[11px] text-slate-400">{new Date(t.created_at).toLocaleDateString("es-AR")} · {t.created_by}</div>
+                    </button>
+                    <button onClick={() => removeTemplate(t.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>
                   </div>
                 ))
               )}

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Printer, Loader2, FileWarning } from "lucide-react";
 import { fetchSpecById, fetchSpecItems, fetchServiceCatalog, computeServiceCodes } from "../lib/api";
 import { PrintCoverPage, PrintClassPage, ServiceIndexPage } from "./SpecBuilder";
+import QRCode from "qrcode";
 
 // Vista de sólo lectura para un link compartido (?spec=<id>) — sin login,
 // sin edición, pensada para mandarle a alguien que sólo necesita ver el
@@ -9,29 +10,35 @@ import { PrintCoverPage, PrintClassPage, ServiceIndexPage } from "./SpecBuilder"
 export default function ViewSpec({ specId }) {
   const [state, setState] = useState({ loading: true, error: "", docMeta: null, items: [] });
   const [catalog, setCatalog] = useState([]);
+  const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
     fetchServiceCatalog().then(setCatalog).catch(() => setCatalog([]));
   }, []);
-  const codes = React.useMemo(() => computeServiceCodes(catalog), [catalog]);
+  const codes = useMemo(() => computeServiceCodes(catalog), [catalog]);
+
+  useEffect(() => {
+    const url = `${window.location.origin}${window.location.pathname}?spec=${specId}`;
+    QRCode.toDataURL(url, { margin: 1, width: 160 }).then(setQrDataUrl).catch(() => setQrDataUrl(""));
+  }, [specId]);
 
   useEffect(() => {
     (async () => {
       try {
         const spec = await fetchSpecById(specId);
-        const classes = await fetchSpecItems(specId);
+        const rows = await fetchSpecItems(specId);
         setState({
           loading: false, error: "",
           docMeta: {
             title: spec.title, project: spec.project, client: spec.client || "",
             docNumber: spec.doc_number, revision: spec.revision, company: spec.company,
             confidential: spec.confidential, serviceCoding: spec.service_coding, date: spec.date,
+            preparedBy: spec.prepared_by || "", preparedDate: spec.prepared_date || "",
+            checkedBy: spec.checked_by || "", checkedDate: spec.checked_date || "",
+            approvedBy: spec.approved_by || "", approvedDate: spec.approved_date || "",
+            clientLogoUrl: spec.client_logo_url || "",
           },
-          items: classes.map((c) => ({ plantName: "—", item: {
-            id: c.id, code: c.code, fam: c.fam, mat: c.mat, corr: c.corr, rating: c.rating,
-            design: c.design, services: c.services, page: c.page, detail: c.detail,
-            reviewedBy: c.reviewed_by, reviewedAt: c.reviewed_at, reviewedAgainst: c.reviewed_against,
-          } })),
+          items: rows.map((r) => (r.plantName ? r : { plantName: "—", item: r.item })),
         });
       } catch (e) {
         setState({ loading: false, error: "No se encontró esa especificación (puede haber sido borrada, o el link está mal copiado).", docMeta: null, items: [] });
@@ -60,7 +67,7 @@ export default function ViewSpec({ specId }) {
         </button>
       </div>
       <div className="max-w-[850px] mx-auto py-6 print:py-0 print:max-w-none">
-        <PrintCoverPage docMeta={state.docMeta} items={state.items} />
+        <PrintCoverPage docMeta={state.docMeta} items={state.items} qrDataUrl={qrDataUrl} />
         {state.items.map((s, i) => (
           <PrintClassPage key={s.item.id} item={s.item} plantName={s.plantName} docMeta={state.docMeta} index={i} total={state.items.length} />
         ))}
