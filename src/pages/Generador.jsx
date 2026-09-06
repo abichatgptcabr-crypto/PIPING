@@ -15,6 +15,7 @@ import {
   fetchSpecsForClass,
 } from "../lib/api";
 import { useAuth } from "../components/AuthGate";
+import { useToast, Toast } from "../components/Toast";
 
 /* ═══════════════════════════════ UI ════════════════════════════════════ */
 function Gauge5({ level }) {
@@ -204,7 +205,7 @@ function ReviewPanel({ item, onMark, onClear }) {
   );
 }
 
-function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed }) {
+function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed, showToast }) {
   const [tab, setTab] = useState("cond");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -222,8 +223,15 @@ function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed })
   const setD = (patch) => setDraft((dr) => ({ ...dr, detail: { ...dr.detail, ...patch } }));
   const save = async () => {
     setSaving(true);
-    try { await onSave(idRef.current, draft); setEditing(false); }
-    finally { setSaving(false); }
+    try {
+      await onSave(idRef.current, draft);
+      setEditing(false);
+      showToast?.("Clase guardada.");
+    } catch (e) {
+      showToast?.("No se pudo guardar: " + e.message, "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -442,7 +450,7 @@ function CodeStamp({ sel, setSel, classes, slots }) {
 function Convention({ slots }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-md border border-slate-200 bg-white">
+    <div className="rounded-md border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 py-3 text-left">
         <span className="flex items-center gap-2 text-sm font-medium text-slate-800"><Info size={15} className="text-slate-400" /> Convención de códigos</span>
         {open ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
@@ -802,6 +810,7 @@ export default function Generador() {
   const [err, setErr] = useState("");
   const [openId, setOpenId] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [toast, showToast] = useToast();
   const [asm, setAsm] = useState({});
   const [q, setQ] = useState("");
   const [onlyIncluded, setOnlyIncluded] = useState(false);
@@ -911,6 +920,7 @@ export default function Generador() {
       const seedSource = active.id === "lacal-pluspetrol" ? seedLaCalera() : seedClasses();
       await resetPlantClasses(active.id, seedSource);
       await reload();
+      showToast("Estándar restaurado.");
     },
     newPlant: async (mode) => {
       const id = uid();
@@ -969,7 +979,23 @@ export default function Generador() {
   const includedCount = active ? active.classes.filter((k) => k.on).length : 0;
 
   if (!ready)
-    return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm gap-2 flex items-center"><Loader2 size={16} className="animate-spin" /> Cargando registro…</div>;
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 animate-pulse">
+        <div className="space-y-5">
+          <div className="h-6 w-56 bg-slate-200 rounded" />
+          <div className="h-9 w-full bg-slate-200 rounded-md" />
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="grid sm:grid-cols-2 gap-3">
+                <div className="h-20 bg-slate-200 rounded-md" />
+                <div className="h-20 bg-slate-200 rounded-md" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="h-72 bg-slate-200 rounded-md" />
+      </div>
+    );
   if (err)
     return <div className="min-h-[60vh] flex items-center justify-center text-red-500 text-sm px-6 text-center">{err}</div>;
   if (!active)
@@ -1019,7 +1045,7 @@ export default function Generador() {
           </div>
 
           {filtersOpen && (
-            <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+            <div className="rounded-md border border-slate-200 bg-white shadow-sm p-4 space-y-4">
               <div className="grid sm:grid-cols-3 gap-4">
                 <FacetGroup label="Material" options={facetOptions.mats} selected={fMat} onToggle={toggleInSet(setFMat)} />
                 <FacetGroup label="Rating" options={facetOptions.ratings} selected={fRating} onToggle={toggleInSet(setFRating)} />
@@ -1065,7 +1091,7 @@ export default function Generador() {
               <Convention slots={slots} />
             </>
           ) : (
-            <div className="rounded-md border border-slate-200 bg-white p-4 text-[13px] text-slate-600 leading-relaxed">
+            <div className="rounded-md border border-slate-200 bg-white shadow-sm p-4 text-[13px] text-slate-600 leading-relaxed">
               <div className="flex items-center gap-2 text-[13px] font-medium text-slate-800 mb-1.5"><Info size={15} className="text-slate-400" /> Código propio por clase</div>
               Este proyecto no usa una convención segmentada: cada clase tiene su propio código de documento (ej. B10A, A10R). El ensamblador de la izquierda no aplica acá — buscá por código directamente en el registro o con la barra de búsqueda.
             </div>
@@ -1083,9 +1109,11 @@ export default function Generador() {
           onSave={handlers.saveClass}
           onMarkReviewed={handlers.markReviewed}
           onClearReviewed={handlers.clearReviewed}
+          showToast={showToast}
         />
       )}
       {compareOpen && <CompareView plants={plants} onClose={() => setCompareOpen(false)} />}
+      <Toast toast={toast} />
     </div>
   );
 }

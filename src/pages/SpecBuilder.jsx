@@ -13,6 +13,7 @@ import {
   fetchRevisionHistory, saveClientProfile, fetchClientProfiles, deleteClientProfile,
 } from "../lib/api";
 import { EditTable, DesignEdit } from "./Generador";
+import { useToast, Toast } from "../components/Toast";
 import * as XLSX from "xlsx";
 import QRCode from "qrcode";
 
@@ -461,6 +462,25 @@ function ReplacePicker({ plants, onPick, onCancel }) {
   );
 }
 
+// Insignia numerada de paso — con conector opcional hacia abajo, para que
+// la página se lea como un instructivo corto en vez de una lista de campos.
+function StepBadge({ n, title, desc, connector }) {
+  return (
+    <div className="flex items-start gap-3 mb-3 relative">
+      <div className="flex flex-col items-center shrink-0">
+        <div className="w-7 h-7 rounded-full bg-[#00589E] text-white flex items-center justify-center font-display font-bold text-[13px] shadow-md shadow-[#00589E]/30">
+          {n}
+        </div>
+        {connector && <div className="w-[2px] flex-1 bg-[#00589E]/20 mt-1" style={{ minHeight: 24 }} />}
+      </div>
+      <div className="pt-0.5">
+        <div className="text-[13px] font-bold text-[#113044] uppercase tracking-wide">{title}</div>
+        {desc && <div className="text-[12px] text-slate-500 mt-0.5">{desc}</div>}
+      </div>
+    </div>
+  );
+}
+
 export default function SpecBuilder() {
   const [plants, setPlants] = useState([]);
   const [ready, setReady] = useState(false);
@@ -468,7 +488,7 @@ export default function SpecBuilder() {
   const [selected, setSelected] = useState([]); // [{ plantId, plantName, item }]
   const [mode, setMode] = useState("build"); // 'build' | 'print'
   const [saving, setSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState("");
+  const [toast, showToast] = useToast();
   const [showSaved, setShowSaved] = useState(false);
   const [savedSpecs, setSavedSpecs] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -596,10 +616,9 @@ export default function SpecBuilder() {
     try {
       await saveClientProfile(docMeta.client.trim(), docMeta.clientLogoUrl);
       setClientProfiles(null);
-      setSavedMsg("Perfil de cliente guardado.");
-      setTimeout(() => setSavedMsg(""), 2500);
+      showToast("Perfil de cliente guardado.");
     } catch (e) {
-      setSavedMsg("No se pudo guardar el perfil: " + e.message);
+      showToast("No se pudo guardar el perfil: " + e.message, "error");
     } finally {
       setSavingClientProfile(false);
     }
@@ -660,10 +679,9 @@ export default function SpecBuilder() {
       const spec = await saveSpec(docMeta, selected);
       setCurrentSpecId(spec.id);
       fetchRevisionHistory(docMeta.docNumber).then(setRevisionHistory).catch(() => {});
-      setSavedMsg("Especificación guardada.");
-      setTimeout(() => setSavedMsg(""), 2500);
+      showToast("Especificación guardada.");
     } catch (e) {
-      setSavedMsg("No se pudo guardar: " + e.message);
+      showToast("No se pudo guardar: " + e.message, "error");
     } finally {
       setSaving(false);
     }
@@ -716,8 +734,7 @@ export default function SpecBuilder() {
     applyRows(rows);
     setCurrentSpecId(null);
     setShowSaved(false);
-    setSavedMsg("Copiado como base — completá el N° de documento y guardá para crear el nuevo.");
-    setTimeout(() => setSavedMsg(""), 4000);
+    showToast("Copiado como base — completá el N° de documento y guardá para crear el nuevo.");
   };
 
   const removeSaved = async (id) => {
@@ -752,10 +769,9 @@ export default function SpecBuilder() {
       setShowTemplateForm(false);
       setTemplateName("");
       setTemplates(null); // fuerza recarga la próxima vez que se abra la lista
-      setSavedMsg("Plantilla guardada.");
-      setTimeout(() => setSavedMsg(""), 2500);
+      showToast("Plantilla guardada.");
     } catch (e) {
-      setSavedMsg("No se pudo guardar la plantilla: " + e.message);
+      showToast("No se pudo guardar la plantilla: " + e.message, "error");
     } finally {
       setSavingTemplate(false);
     }
@@ -770,7 +786,7 @@ export default function SpecBuilder() {
       const url = await uploadClientLogo(file);
       setDocMeta((d) => ({ ...d, clientLogoUrl: url }));
     } catch (err) {
-      setSavedMsg("No se pudo subir el logo: " + err.message);
+      showToast("No se pudo subir el logo: " + err.message, "error");
     } finally {
       setUploadingLogo(false);
       e.target.value = "";
@@ -810,7 +826,26 @@ export default function SpecBuilder() {
     );
   }
 
-  if (!ready) return <div className="min-h-[60vh] flex items-center justify-center text-slate-400 text-sm gap-2"><Loader2 size={16} className="animate-spin" /> Cargando…</div>;
+  if (!ready) return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 animate-pulse">
+      <div className="space-y-5">
+        <div className="h-6 w-56 bg-slate-200 rounded" />
+        <div className="h-9 w-full bg-slate-200 rounded-md" />
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="grid sm:grid-cols-2 gap-3">
+              <div className="h-14 bg-slate-200 rounded-md" />
+              <div className="h-14 bg-slate-200 rounded-md" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-4">
+        <div className="h-64 bg-slate-200 rounded-md" />
+        <div className="h-40 bg-slate-200 rounded-md" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-[#F4F7FA] min-h-[70vh]">
@@ -828,13 +863,17 @@ export default function SpecBuilder() {
               <FolderOpen size={14} /> Specs guardadas
             </button>
           </div>
-          <p className="text-[13px] text-slate-500 mb-4">
+          <p className="text-[13px] text-slate-500 mb-5">
             Elegí clases de cualquiera de los proyectos cargados para armar un documento nuevo. Se puede combinar EPF y La Calera en la misma spec.
           </p>
-          <div className="relative mb-5">
-            <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar clase, servicio o material…"
-              className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white" />
+
+          <div className="rounded-md border border-slate-200 bg-white shadow-sm p-4 mb-5">
+            <StepBadge n={1} title="Paso 1 · Elegí las clases" desc="Buscá por código, servicio o material, y tildá una por una o un grupo entero de una vez." />
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar clase, servicio o material…"
+                className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white" />
+            </div>
           </div>
           {plants.map((p) => (
             <PlantColumn key={p.id} plant={p} selectedIds={selectedIds} onToggle={toggle} onToggleGroup={toggleGroup} q={q} />
@@ -842,8 +881,8 @@ export default function SpecBuilder() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-md border border-slate-200 bg-white p-4">
-            <div className="text-[12px] font-semibold text-slate-700 mb-3">Datos del documento</div>
+          <div className="rounded-md border border-slate-200 bg-white shadow-sm p-4">
+            <StepBadge n={2} title="Paso 2 · Completá los datos del documento" desc="Título, cliente y N° de documento — es lo que va a aparecer en la portada del PDF." connector />
             <div className="space-y-2">
               {[
                 ["title", "Título"], ["project", "Proyecto"],
@@ -921,9 +960,9 @@ export default function SpecBuilder() {
             </div>
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-white p-4">
+          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[12px] font-semibold text-slate-700">Plantillas</span>
+              <span className="text-[11px] uppercase tracking-wider text-slate-500">Atajo opcional · Plantillas</span>
               <button onClick={openTemplates} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#00406E]">
                 <LayoutTemplate size={14} /> Usar plantilla
               </button>
@@ -932,7 +971,7 @@ export default function SpecBuilder() {
               <button
                 disabled={selected.length === 0}
                 onClick={() => setShowTemplateForm(true)}
-                className="w-full flex items-center justify-center gap-1.5 text-[12.5px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#4DA8DC] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-1.5 text-[12.5px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:border-[#4DA8DC] disabled:opacity-50"
               >
                 <Save size={13} /> Guardar esta selección como plantilla
               </button>
@@ -948,7 +987,8 @@ export default function SpecBuilder() {
             )}
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-white p-4">
+          <div className="rounded-md border border-slate-200 bg-white shadow-sm p-4">
+            <StepBadge n={3} title="Paso 3 · Revisá y generá" desc="Confirmá qué clases quedaron y descargá el documento — en PDF, en Excel, o guardalo para compartir." />
             <div className="flex items-center justify-between mb-3">
               <span className="text-[12px] font-semibold text-slate-700">Borrador ({selected.length})</span>
               <span className="text-[10.5px] text-slate-400 flex items-center gap-1"><ShieldAlert size={11} /> tocá el escudo para marcar revisada</span>
@@ -1017,7 +1057,6 @@ export default function SpecBuilder() {
                 <FileSpreadsheet size={14} /> Descargar Excel
               </button>
             </div>
-            {savedMsg && <div className="text-[12px] text-emerald-700 mt-2">{savedMsg}</div>}
           </div>
         </div>
       </div>
@@ -1136,6 +1175,7 @@ export default function SpecBuilder() {
           />
         ) : null;
       })()}
+      <Toast toast={toast} />
     </div>
   );
 }
