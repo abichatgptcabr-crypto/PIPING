@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Settings, FileStack, Droplets, ChevronRight } from "lucide-react";
+import { Settings, FileStack, Droplets, ChevronRight, Layers, Building2 } from "lucide-react";
+import { fetchStats } from "../lib/api";
 
 const TAGLINES = [
   "Generá clases de cañería en minutos, no en horas.",
@@ -8,6 +9,24 @@ const TAGLINES = [
   "Cada revisión guardada queda congelada — nunca cambia sola.",
   "Un solo catálogo de servicios para todos los proyectos.",
 ];
+
+function CountUp({ target }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!target) { setN(0); return; }
+    const duration = 700;
+    const start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / duration);
+      setN(Math.round(target * (1 - Math.pow(1 - p, 3)))); // ease-out
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return <>{n}</>;
+}
 
 const TOOLS = [
   {
@@ -38,6 +57,11 @@ const lastUpdated = new Date().toLocaleDateString("es-AR");
 export default function Home({ onOpen }) {
   const [tagIndex, setTagIndex] = useState(0);
   const [fade, setFade] = useState(true);
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    fetchStats().then(setStats).catch(() => setStats(null));
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -82,6 +106,27 @@ export default function Home({ onOpen }) {
         </div>
       </section>
 
+      {stats && (
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              [Layers, "Clases cargadas", stats.classCount],
+              [FileStack, "Specs armadas", stats.specCount],
+              [Droplets, "Servicios en catálogo", stats.serviceCount],
+              [Building2, "Proyectos", stats.plantCount],
+            ].map(([Icon, label, value]) => (
+              <div key={label} className="rounded-md border border-slate-200 bg-white px-4 py-3 flex items-center gap-3">
+                <Icon size={18} className="text-[#00589E] shrink-0" />
+                <div>
+                  <div className="font-display text-[22px] font-bold leading-none text-[#113044]"><CountUp target={value} /></div>
+                  <div className="text-[11px] text-slate-500">{label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
         <div className="text-[12px] font-display uppercase tracking-[0.12em] text-slate-500 mb-4">Herramientas clave</div>
 
@@ -90,7 +135,7 @@ export default function Home({ onOpen }) {
             const active = t.status === "activo";
             const Icon = t.icon;
             return (
-              <div key={t.id} className={`rounded-md border p-5 transition ${active ? "border-slate-200 bg-white hover:border-[#00589E]" : "border-slate-200 bg-white/60"}`}>
+              <div key={t.id} className={`rounded-md border p-5 transition-all duration-200 ${active ? "border-slate-200 bg-white hover:border-[#00589E] hover:-translate-y-0.5 hover:shadow-md" : "border-slate-200 bg-white/60"}`}>
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${active ? "bg-[#113044]" : "bg-slate-200"}`}>
                     <Icon size={18} className={active ? "text-[#4DA8DC]" : "text-slate-400"} />
