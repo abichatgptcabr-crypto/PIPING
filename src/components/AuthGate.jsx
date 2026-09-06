@@ -81,13 +81,13 @@ export function AuthGateReal({ children }) {
                     type="email" required autoFocus value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="vos@hytech.com"
-                    className="w-full pl-8 pr-2 py-2.5 text-[13px] border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none"
+                    className="w-full pl-8 pr-2 py-2.5 text-[13px] border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none"
                   />
                 </div>
                 {err && <div className="text-[12px] text-red-600 mb-3">{err}</div>}
                 <button
                   type="submit" disabled={sending}
-                  className="w-full flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2.5 rounded-md bg-[#2C568E] text-white hover:bg-[#1F3F6E] disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2.5 rounded-md bg-[#00589E] text-white hover:bg-[#00406E] disabled:opacity-60"
                 >
                   {sending ? <Loader2 size={14} className="animate-spin" /> : null}
                   Mandarme el link
