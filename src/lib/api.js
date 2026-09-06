@@ -534,3 +534,14 @@ export async function deleteClientProfile(id) {
   const { error } = await supabase.from("client_profiles").delete().eq("id", id);
   if (error) throw error;
 }
+
+/* ═══════════════════════ Estadísticas para el Inicio ═══════════════════ */
+export async function fetchStats() {
+  const [{ count: classCount }, { count: specCount }, { count: serviceCount }, { count: plantCount }] = await Promise.all([
+    supabase.from("classes").select("id", { count: "exact", head: true }),
+    supabase.from("specs").select("id", { count: "exact", head: true }),
+    supabase.from("services").select("id", { count: "exact", head: true }),
+    supabase.from("plants").select("id", { count: "exact", head: true }),
+  ]);
+  return { classCount: classCount || 0, specCount: specCount || 0, serviceCount: serviceCount || 0, plantCount: plantCount || 0 };
+}
