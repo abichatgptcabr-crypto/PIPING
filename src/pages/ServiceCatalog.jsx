@@ -120,8 +120,11 @@ export default function ServiceCatalog() {
     <div className="bg-[#F4F7FA] min-h-[70vh]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-center gap-2 mb-1">
-          <Droplets size={18} className="text-[#00589E]" />
-          <h2 className="text-[16px] font-semibold text-slate-900">Catálogo de servicios</h2>
+          <Droplets size={20} className="text-[#00589E]" />
+          <div>
+            <h2 className="font-display text-[22px] font-bold uppercase tracking-wide text-[#113044] leading-none">Catálogo de servicios</h2>
+            <div className="h-[3px] w-10 bg-[#00589E] mt-2" />
+          </div>
         </div>
         <p className="text-[13px] text-slate-500 mb-4">
           Todos los servicios que aparecen en cualquier clase de cualquier proyecto, agrupados por tipo. El código

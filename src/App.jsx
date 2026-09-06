@@ -6,7 +6,7 @@ import SpecBuilder from "./pages/SpecBuilder";
 import ServiceCatalog from "./pages/ServiceCatalog";
 import ViewSpec from "./pages/ViewSpec";
 import AuthGate from "./components/AuthGate";
-import hytechLogo from "./assets/hytech-logo.png";
+import hytechLogoWhite from "./assets/hytech-logo-white.png";
 import { SEED_PLANTS } from "./data/plants";
 import { syncFromSeed } from "./lib/api";
 
@@ -42,22 +42,24 @@ export default function App() {
   return (
     <AuthGate>
       <div className="min-h-screen flex flex-col">
-      <header className="print:hidden bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+      <header className="print:hidden bg-[#00589E] sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <button onClick={() => setPage("home")} className="flex items-center gap-2 shrink-0">
-            <img src={hytechLogo} alt="Hytech" className="h-7 w-auto" />
+            <img src={hytechLogoWhite} alt="Hytech" className="h-6 w-auto" />
           </button>
+          <span className="text-white/40 text-[13px] font-display uppercase tracking-wider">/</span>
+          <span className="text-white/90 text-[12px] font-display uppercase tracking-[0.12em]">Herramientas internas</span>
           {page !== "home" && (
             <>
-              <span className="text-slate-300">/</span>
+              <span className="text-white/40">/</span>
               <button
                 onClick={() => setPage("home")}
-                className="flex items-center gap-1.5 text-[13px] text-slate-500 hover:text-[#00406E]"
+                className="flex items-center gap-1.5 text-[13px] text-white/70 hover:text-white"
               >
                 <ArrowLeft size={14} /> Inicio
               </button>
-              <span className="text-slate-300">/</span>
-              <span className="text-[13px] font-medium text-slate-800">{PAGE_TITLES[page]}</span>
+              <span className="text-white/40">/</span>
+              <span className="text-[13px] font-medium text-white">{PAGE_TITLES[page]}</span>
             </>
           )}
         </div>

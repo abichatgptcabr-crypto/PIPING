@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta Hytech, muestreada del isologo institucional (HY azul / tech grafito) */
+  /* Paleta Hytech, muestreada del sitio institucional real (hytech.com.ar) */
   --color-hytech-navy: #113044;
   --color-hytech-blue-dark: #00406E;
   --color-hytech-blue: #00589E;
@@ -9,10 +9,25 @@
   --color-hytech-sky: #4DA8DC;
   --color-hytech-paper: #F4F7FA;
 
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Barlow Condensed', var(--font-sans);
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
 }
 
 body {
   font-family: var(--font-sans);
 }
+
+/* Títulos y etiquetas de sección: condensada, bold, mayúsculas con tracking —
+   el mismo lenguaje tipográfico del sitio institucional, en vez de la
+   tipografía genérica de antes. */
+h1, h2, .font-display {
+  font-family: var(--font-display);
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+

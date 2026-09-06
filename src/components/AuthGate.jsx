@@ -64,7 +64,7 @@ export function AuthGateReal({ children }) {
           <div className="flex justify-center mb-6">
             <img src={hytechLogo} alt="Hytech" className="h-9 w-auto" />
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <div className="bg-white border border-slate-200 rounded-md p-6">
             {sent ? (
               <div className="text-center py-4">
                 <CheckCircle2 size={28} className="text-emerald-600 mx-auto mb-3" />

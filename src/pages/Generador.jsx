@@ -228,7 +228,7 @@ function DetailPanel({ item, onClose, onSave, onMarkReviewed, onClearReviewed })
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
-      <div className="w-full max-w-3xl h-full bg-slate-50 shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-3xl h-full bg-slate-50 shadow-lg border border-slate-200 flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 bg-white border-b border-slate-200 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
@@ -409,7 +409,7 @@ function CodeStamp({ sel, setSel, classes, slots }) {
   const assembled = slots.map((s) => sel[s.slot] || "·").join("");
   const match = classes.find((k) => k.code === assembled);
   return (
-    <div className="rounded-xl bg-[#113044] text-slate-100 p-5">
+    <div className="rounded-md bg-[#113044] text-slate-100 p-5">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8FAFD6] mb-4"><Layers size={13} /> Ensamblador de clase</div>
       <div className="flex items-baseline justify-center gap-1 mb-4 flex-wrap">
         {slots.map((s) => (
@@ -442,7 +442,7 @@ function CodeStamp({ sel, setSel, classes, slots }) {
 function Convention({ slots }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
+    <div className="rounded-md border border-slate-200 bg-white">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 py-3 text-left">
         <span className="flex items-center gap-2 text-sm font-medium text-slate-800"><Info size={15} className="text-slate-400" /> Convención de códigos</span>
         {open ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
@@ -677,7 +677,7 @@ function CompareView({ plants, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
-      <div className="w-full max-w-5xl h-full bg-slate-50 shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-5xl h-full bg-slate-50 shadow-lg border border-slate-200 flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2 text-[15px] font-semibold text-slate-800"><GitCompare size={18} /> Comparar clases</div>
           <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400"><X size={18} /></button>
@@ -984,11 +984,14 @@ export default function Generador() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6">
         <div className="space-y-5 order-2 lg:order-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-800">
-              Registro de clases
-              <span className="ml-2 text-[12px] font-normal text-slate-500">{includedCount} de {active.classes.length} en el proyecto</span>
-            </h2>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="font-display text-[22px] font-bold uppercase tracking-wide text-[#113044] leading-none">
+                Registro de clases
+                <span className="ml-2 font-sans text-[12px] font-normal normal-case tracking-normal text-slate-500">{includedCount} de {active.classes.length} en el proyecto</span>
+              </h2>
+              <div className="h-[3px] w-10 bg-[#00589E] mt-2" />
+            </div>
             <div className="flex items-center gap-2">
               <button onClick={handlers.addBlank} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md bg-[#113044] text-white hover:bg-[#00406E]"><Plus size={13} /> Agregar clase</button>
               <button onClick={() => setCompareOpen(true)} className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:border-[#4DA8DC]"><GitCompare size={13} /> Comparar clases</button>
@@ -1035,7 +1038,7 @@ export default function Generador() {
           )}
 
           {active.classes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 px-5 py-12 text-center">
+            <div className="rounded-md border border-dashed border-slate-300 bg-white/60 px-5 py-12 text-center">
               <Building2 size={26} className="text-slate-300 mx-auto mb-3" />
               <div className="text-[14px] font-medium text-slate-600">Plantilla vacía</div>
               <div className="text-[13px] text-slate-500 mt-1 max-w-md mx-auto">Este tipo de planta todavía no tiene clases. Duplicá el estándar EPF como base desde "Nuevo tipo de planta", o cargá tus clases con "Agregar clase".</div>
@@ -1062,7 +1065,7 @@ export default function Generador() {
               <Convention slots={slots} />
             </>
           ) : (
-            <div className="rounded-xl border border-slate-200 bg-white p-4 text-[13px] text-slate-600 leading-relaxed">
+            <div className="rounded-md border border-slate-200 bg-white p-4 text-[13px] text-slate-600 leading-relaxed">
               <div className="flex items-center gap-2 text-[13px] font-medium text-slate-800 mb-1.5"><Info size={15} className="text-slate-400" /> Código propio por clase</div>
               Este proyecto no usa una convención segmentada: cada clase tiene su propio código de documento (ej. B10A, A10R). El ensamblador de la izquierda no aplica acá — buscá por código directamente en el registro o con la barra de búsqueda.
             </div>

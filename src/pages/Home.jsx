@@ -1,110 +1,92 @@
 import React from "react";
-import { ArrowRight, Layers, FileStack, Droplets } from "lucide-react";
+import { Settings, FileStack, Droplets, ChevronRight } from "lucide-react";
 
 const TOOLS = [
   {
     id: "generador",
     status: "activo",
     title: "Generador de piping class",
-    desc: "Seleccioná el tipo de planta, el estándar de clases viene pre-cargado y editable. Ensamblá el código A-B-C-D y llegá a componentes, válvulas y ramificaciones.",
-    meta: "ASME B31.3 · EPF + La Calera",
-    icon: Layers,
+    desc: "Configuración y ensamblaje de clases de cañería y componentes pre-cargados según normativas vigentes (ASME B31.3).",
+    icon: Settings,
   },
   {
     id: "spec-builder",
     status: "activo",
     title: "Armar especificación",
-    desc: "Elegí clases de cualquiera de los proyectos cargados —EPF, La Calera, o combinando ambos— y armá un documento nuevo con el formato de spec, listo para imprimir o guardar como PDF.",
-    meta: "cross-proyecto · exporta a PDF",
+    desc: "Consolidación de clases de más de un proyecto para exportación y emisión de especificaciones en PDF.",
     icon: FileStack,
   },
   {
     id: "service-catalog",
     status: "activo",
     title: "Catálogo de servicios",
-    desc: "Todos los servicios cargados, de cualquier proyecto, agrupados por tipo (agua, gas, hidrocarburos, contra incendio...) con una descripción breve de cada uno.",
-    meta: "cross-proyecto · codificación para PDF",
+    desc: "Todos los servicios cargados, de cualquier proyecto, agrupados por tipo, con descripción y codificación para documentos.",
     icon: Droplets,
   },
 ];
 
+const lastUpdated = new Date().toLocaleDateString("es-AR");
+
 export default function Home({ onOpen }) {
   return (
     <div className="bg-[#F4F7FA] text-slate-900">
-      {/* hero: título como sello de plano técnico */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-10 sm:pt-20 sm:pb-14">
-        <div className="grid lg:grid-cols-[1fr_auto] gap-10 items-end">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+        <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div>
-            <div className="text-[13px] font-mono text-[#00589E] mb-3">HYTECH · ING. DE CAÑERÍAS</div>
-            <h1 className="text-[2.6rem] sm:text-[3.6rem] leading-[0.98] font-semibold tracking-tight text-[#113044]">
-              Herramientas internas<br />para piping
+            <h1 className="font-display text-[2.6rem] sm:text-[3.4rem] leading-[1.02] font-bold text-[#113044]">
+              Gestor de Especificaciones Técnicas
             </h1>
-            <p className="mt-5 max-w-lg text-[15px] text-slate-600 leading-relaxed">
-              Un lugar donde las especificaciones que ya usamos —clases de cañería,
-              nomenclatura, componentes— se pueden generar, revisar y editar
-              en vez de reescribirse a mano en cada proyecto.
+            <p className="mt-4 max-w-lg text-[15px] text-slate-600 leading-relaxed">
+              Herramientas centralizadas para el diseño, configuración y emisión de especificaciones de proyecto.
             </p>
           </div>
 
-          {/* title block al estilo de un plano de ingeniería */}
-          <div className="font-mono text-[11px] border border-slate-300 bg-white self-end w-full max-w-[280px] lg:w-[280px]">
-            <div className="grid grid-cols-2 border-b border-slate-300">
-              <div className="px-3 py-2 border-r border-slate-300 text-slate-400">PROYECTO</div>
-              <div className="px-3 py-2 text-slate-700">Hytech Tools</div>
+          <div className="text-[12.5px] border border-slate-300 bg-white self-start w-full max-w-[300px] lg:w-[300px] rounded-md overflow-hidden">
+            <div className="flex justify-between px-4 py-2.5 border-b border-slate-200">
+              <span className="text-slate-400">VERSIÓN DEL SISTEMA:</span>
+              <span className="font-medium text-slate-800">1.0</span>
             </div>
-            <div className="grid grid-cols-2 border-b border-slate-300">
-              <div className="px-3 py-2 border-r border-slate-300 text-slate-400">CÓDIGO</div>
-              <div className="px-3 py-2 text-slate-700">HT-TOOLS-001</div>
-            </div>
-            <div className="grid grid-cols-2">
-              <div className="px-3 py-2 border-r border-slate-300 text-slate-400">REV.</div>
-              <div className="px-3 py-2 text-slate-700">0 · en desarrollo</div>
+            <div className="flex justify-between px-4 py-2.5">
+              <span className="text-slate-400">ÚLTIMA ACTUALIZACIÓN:</span>
+              <span className="font-medium text-slate-800">{lastUpdated}</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* listado de herramientas */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
-        <div className="border-t border-slate-300 pt-2 mb-6 flex items-baseline justify-between">
-          <h2 className="text-[13px] font-mono text-slate-500">HERRAMIENTAS</h2>
-          <span className="text-[12px] text-slate-400">{TOOLS.length} en el registro</span>
-        </div>
+        <div className="text-[12px] font-display uppercase tracking-[0.12em] text-slate-500 mb-4">Herramientas clave</div>
 
-        <div className="space-y-3">
+        <div className="grid sm:grid-cols-2 gap-4">
           {TOOLS.map((t) => {
             const active = t.status === "activo";
             const Icon = t.icon;
             return (
-              <button
-                key={t.id}
-                disabled={!active}
-                onClick={() => active && onOpen(t.id)}
-                className={`w-full text-left grid sm:grid-cols-[auto_1fr_auto] gap-4 sm:gap-8 items-start sm:items-center px-5 py-5 border transition ${
-                  active
-                    ? "border-slate-300 bg-white hover:border-[#00589E] hover:shadow-[0_1px_0_0_rgba(0,0,0,0.02)] cursor-pointer"
-                    : "border-slate-200 bg-white/40 cursor-default"
-                }`}
-              >
-                <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${active ? "bg-[#113044]" : "bg-slate-200"}`}>
-                  <Icon size={18} className={active ? "text-[#4DA8DC]" : "text-slate-400"} />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className={`text-[16px] font-medium ${active ? "text-slate-900" : "text-slate-500"}`}>{t.title}</h3>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                      {t.status}
-                    </span>
+              <div key={t.id} className={`rounded-md border p-5 transition ${active ? "border-slate-200 bg-white hover:border-[#00589E]" : "border-slate-200 bg-white/60"}`}>
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${active ? "bg-[#113044]" : "bg-slate-200"}`}>
+                    <Icon size={18} className={active ? "text-[#4DA8DC]" : "text-slate-400"} />
                   </div>
-                  <p className="mt-1 text-[13px] text-slate-500 max-w-xl leading-relaxed">{t.desc}</p>
-                  <div className="mt-2 text-[11px] font-mono text-slate-400">{t.meta}</div>
-                </div>
-                {active && (
-                  <div className="hidden sm:flex items-center gap-1.5 text-[13px] text-[#00406E] font-medium shrink-0">
-                    Abrir <ArrowRight size={15} />
+                  <div className="min-w-0 flex-1">
+                    <h3 className={`text-[15px] font-semibold ${active ? "text-slate-900" : "text-slate-500"}`}>{t.title}</h3>
+                    <p className="mt-1.5 text-[13px] text-slate-500 leading-relaxed">{t.desc}</p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className={`text-[10.5px] font-medium px-2 py-0.5 rounded ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+                        {t.status}
+                      </span>
+                      <button
+                        disabled={!active}
+                        onClick={() => active && onOpen(t.id)}
+                        className={`flex items-center gap-0.5 text-[12.5px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded border ${
+                          active ? "border-[#00589E] text-[#00589E] hover:bg-[#00589E] hover:text-white" : "border-slate-200 text-slate-300 cursor-default"
+                        }`}
+                      >
+                        Abrir <ChevronRight size={13} />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </button>
+                </div>
+              </div>
             );
           })}
         </div>

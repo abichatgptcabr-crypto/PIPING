@@ -637,8 +637,11 @@ export default function SpecBuilder() {
         <div>
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <FileStack size={18} className="text-[#00589E]" />
-              <h2 className="text-[16px] font-semibold text-slate-900">Armar especificación</h2>
+              <FileStack size={20} className="text-[#00589E]" />
+              <div>
+                <h2 className="font-display text-[22px] font-bold uppercase tracking-wide text-[#113044] leading-none">Armar especificación</h2>
+                <div className="h-[3px] w-10 bg-[#00589E] mt-2" />
+              </div>
             </div>
             <button onClick={openSavedList} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#00406E]">
               <FolderOpen size={14} /> Specs guardadas
@@ -658,7 +661,7 @@ export default function SpecBuilder() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="rounded-md border border-slate-200 bg-white p-4">
             <div className="text-[12px] font-semibold text-slate-700 mb-3">Datos del documento</div>
             <div className="space-y-2">
               {[
@@ -713,7 +716,7 @@ export default function SpecBuilder() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="rounded-md border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[12px] font-semibold text-slate-700">Plantillas</span>
               <button onClick={openTemplates} className="flex items-center gap-1.5 text-[12px] text-slate-600 hover:text-[#00406E]">
@@ -740,7 +743,7 @@ export default function SpecBuilder() {
             )}
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="rounded-md border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[12px] font-semibold text-slate-700">Borrador ({selected.length})</span>
               <span className="text-[10.5px] text-slate-400 flex items-center gap-1"><ShieldAlert size={11} /> tocá el ícono para marcar revisada</span>
@@ -834,7 +837,7 @@ export default function SpecBuilder() {
 
       {showSaved && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40" onClick={() => setShowSaved(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-md shadow-lg border border-slate-200 w-full max-w-lg max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
               <span className="text-[14px] font-semibold text-slate-800">Especificaciones guardadas</span>
               <button onClick={() => setShowSaved(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
@@ -881,7 +884,7 @@ export default function SpecBuilder() {
 
       {showTemplates && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40" onClick={() => setShowTemplates(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-md shadow-lg border border-slate-200 w-full max-w-lg max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
               <span className="text-[14px] font-semibold text-slate-800">Plantillas guardadas</span>
               <button onClick={() => setShowTemplates(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
