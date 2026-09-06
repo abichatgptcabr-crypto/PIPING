@@ -1,19 +1,27 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
   FileStack, Search, X, Printer, ArrowLeft, Building2, ShieldCheck,
-  CheckSquare, Square, FileWarning, Loader2, Save, FolderOpen, Trash2,
+  CheckSquare, Square, MinusSquare, FileWarning, Loader2, Save, FolderOpen, Trash2,
+  FileSpreadsheet, Link2, Check,
 } from "lucide-react";
 import { FAMILIES, COMP_COLS, VALVE_COLS } from "../data/plants";
-import { fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, deleteSpec } from "../lib/api";
+import { fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, fetchSpecById, deleteSpec, fetchServiceCatalog, computeServiceCodes } from "../lib/api";
+import * as XLSX from "xlsx";
 
 /* ═══════════════════════════ Selector cross-planta ═══════════════════════ */
-function PlantColumn({ plant, selectedIds, onToggle, q }) {
+function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
   const filtered = plant.classes.filter((k) => {
     if (!q) return true;
     const hay = (k.code + " " + k.services.join(" ") + " " + k.mat).toLowerCase();
     return hay.includes(q.toLowerCase());
   });
+  const groups = useMemo(() => {
+    const g = {};
+    filtered.forEach((k) => (g[k.fam] ||= []).push(k));
+    return Object.entries(g);
+  }, [filtered]);
   if (plant.classes.length === 0) return null;
+
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-2">
@@ -24,24 +32,41 @@ function PlantColumn({ plant, selectedIds, onToggle, q }) {
       {filtered.length === 0 ? (
         <div className="text-[12px] text-slate-400 pl-6">Sin resultados para el filtro.</div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-1.5">
-          {filtered.map((k) => {
-            const checked = selectedIds.has(k.id);
+        <div className="space-y-3">
+          {groups.map(([fam, list]) => {
+            const allIn = list.every((k) => selectedIds.has(k.id));
+            const someIn = !allIn && list.some((k) => selectedIds.has(k.id));
             return (
-              <button
-                key={k.id}
-                onClick={() => onToggle(plant, k)}
-                className={`flex items-start gap-2 text-left px-2.5 py-2 rounded-md border text-[12.5px] transition ${
-                  checked ? "border-[#2C568E] bg-[#EAF3FB]" : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
-              >
-                {checked ? <CheckSquare size={14} className="text-[#2C568E] mt-0.5 shrink-0" /> : <Square size={14} className="text-slate-300 mt-0.5 shrink-0" />}
-                <span className="min-w-0">
-                  <span className="font-mono font-semibold text-slate-800">{k.code}</span>
-                  <span className="text-slate-500"> · {k.rating} · {k.mat}</span>
-                  {!k.detail && <span className="ml-1 text-[10px] text-slate-400">(sólo resumen)</span>}
-                </span>
-              </button>
+              <div key={fam}>
+                <button
+                  onClick={() => onToggleGroup(plant, list, !allIn)}
+                  className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-slate-500 hover:text-[#1F3F6E] mb-1.5"
+                >
+                  {allIn ? <CheckSquare size={12} className="text-[#2C568E]" /> : someIn ? <MinusSquare size={12} className="text-[#2C568E]" /> : <Square size={12} className="text-slate-300" />}
+                  {FAMILIES[fam] || fam} <span className="text-slate-400 normal-case">({list.length})</span>
+                </button>
+                <div className="grid sm:grid-cols-2 gap-1.5">
+                  {list.map((k) => {
+                    const checked = selectedIds.has(k.id);
+                    return (
+                      <button
+                        key={k.id}
+                        onClick={() => onToggle(plant, k)}
+                        className={`flex items-start gap-2 text-left px-2.5 py-2 rounded-md border text-[12.5px] transition ${
+                          checked ? "border-[#2C568E] bg-[#EAF3FB]" : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        {checked ? <CheckSquare size={14} className="text-[#2C568E] mt-0.5 shrink-0" /> : <Square size={14} className="text-slate-300 mt-0.5 shrink-0" />}
+                        <span className="min-w-0">
+                          <span className="font-mono font-semibold text-slate-800">{k.code}</span>
+                          <span className="text-slate-500"> · {k.rating} · {k.mat}</span>
+                          {!k.detail && <span className="ml-1 text-[10px] text-slate-400">(sólo resumen)</span>}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -104,7 +129,7 @@ function PrintBranchMatrix({ data }) {
   );
 }
 
-function Watermark() {
+export function Watermark() {
   return (
     <div
       className="pointer-events-none select-none absolute inset-0 flex items-center justify-center overflow-hidden"
@@ -120,7 +145,7 @@ function Watermark() {
   );
 }
 
-function PrintClassPage({ item, plantName, docMeta, index, total }) {
+export function PrintClassPage({ item, plantName, docMeta, index, total }) {
   const d = item.detail;
   return (
     <section className="print-page relative">
@@ -198,7 +223,7 @@ function PrintClassPage({ item, plantName, docMeta, index, total }) {
   );
 }
 
-function PrintCoverPage({ docMeta, items }) {
+export function PrintCoverPage({ docMeta, items }) {
   return (
     <section className="print-page relative">
       {docMeta.confidential && <Watermark />}
@@ -250,6 +275,42 @@ function PrintCoverPage({ docMeta, items }) {
   );
 }
 
+export function ServiceIndexPage({ items, catalog, codes }) {
+  const uniqueNames = [...new Set(items.flatMap((s) => (s.item.services || []).filter((n) => n && !n.startsWith("("))))];
+  const withInfo = uniqueNames
+    .map((name) => ({ name, code: codes.get(name) || "—", info: catalog.find((c) => c.name === name) }))
+    .sort((a, b) => (a.code || "").localeCompare(b.code || ""));
+
+  return (
+    <section className="print-page">
+      <header className="border-b-2 border-black pb-2 mb-3">
+        <div className="text-[15px] font-bold uppercase">Índice de servicios</div>
+        <div className="text-[10px] text-slate-600">Códigos de referencia para los servicios incluidos en este documento</div>
+      </header>
+      <table className="w-full text-[10px] font-mono border-collapse">
+        <thead>
+          <tr>
+            <th className="text-left font-bold px-2 py-1.5 border border-black bg-slate-200 w-20">Código</th>
+            <th className="text-left font-bold px-2 py-1.5 border border-black bg-slate-200">Servicio</th>
+            <th className="text-left font-bold px-2 py-1.5 border border-black bg-slate-200">Categoría</th>
+            <th className="text-left font-bold px-2 py-1.5 border border-black bg-slate-200">Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {withInfo.map((s, i) => (
+            <tr key={i}>
+              <td className="px-2 py-1 border border-black font-semibold">{s.code}</td>
+              <td className="px-2 py-1 border border-black">{s.name}</td>
+              <td className="px-2 py-1 border border-black">{s.info?.category || "—"}</td>
+              <td className="px-2 py-1 border border-black">{s.info?.description || <span className="text-slate-400">sin descripción cargada</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 /* ═══════════════════════════════ Página principal ═══════════════════════ */
 export default function SpecBuilder() {
   const [plants, setPlants] = useState([]);
@@ -261,14 +322,18 @@ export default function SpecBuilder() {
   const [savedMsg, setSavedMsg] = useState("");
   const [showSaved, setShowSaved] = useState(false);
   const [savedSpecs, setSavedSpecs] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
   const [docMeta, setDocMeta] = useState({
     title: "Piping Class", project: "", client: "", docNumber: "", revision: "0",
-    company: "Hytech", confidential: true, date: new Date().toLocaleDateString("es-AR"),
+    company: "Hytech", confidential: true, serviceCoding: true, date: new Date().toLocaleDateString("es-AR"),
   });
+  const [serviceCatalog, setServiceCatalog] = useState([]);
 
   useEffect(() => {
     fetchAllPlants().then((data) => { setPlants(data); setReady(true); }).catch(() => setReady(true));
+    fetchServiceCatalog().then(setServiceCatalog).catch(() => setServiceCatalog([]));
   }, []);
+  const serviceCodes = useMemo(() => computeServiceCodes(serviceCatalog), [serviceCatalog]);
 
   const selectedIds = useMemo(() => new Set(selected.map((s) => s.item.id)), [selected]);
 
@@ -292,7 +357,53 @@ export default function SpecBuilder() {
         : [...sel, { plantId: plant.id, plantName: plant.name, item }]
     );
   };
+  const toggleGroup = (plant, list, addAll) => {
+    setSelected((sel) => {
+      const ids = new Set(list.map((k) => k.id));
+      const withoutGroup = sel.filter((s) => !ids.has(s.item.id));
+      if (!addAll) return withoutGroup;
+      const toAdd = list.map((k) => ({ plantId: plant.id, plantName: plant.name, item: k }));
+      return [...withoutGroup, ...toAdd];
+    });
+  };
   const remove = (itemId) => setSelected((sel) => sel.filter((s) => s.item.id !== itemId));
+
+  const downloadExcel = () => {
+    const rows = selected.map((s, i) => ({
+      "Ítem": i + 1,
+      "Código": s.item.code,
+      "Origen": s.plantName,
+      "Familia": FAMILIES[s.item.fam] || s.item.fam,
+      "Servicio": s.item.services.join(" / "),
+      "Material": s.item.mat,
+      "Corrosión": s.item.corr,
+      "Rating": s.item.rating,
+      "Diseño": s.item.design,
+      "Revisado": s.item.reviewedBy ? "Sí" : "No",
+      "Revisado por": s.item.reviewedBy || "",
+      "Fecha revisión": s.item.reviewedAt ? new Date(s.item.reviewedAt).toLocaleDateString("es-AR") : "",
+      "Contra norma": s.item.reviewedAgainst || "",
+    }));
+    const wb = XLSX.utils.book_new();
+    const metaWs = XLSX.utils.aoa_to_sheet([
+      ["Título", docMeta.title], ["Proyecto", docMeta.project], ["Cliente", docMeta.client],
+      ["N° de documento", docMeta.docNumber], ["Revisión", docMeta.revision],
+      ["Empresa", docMeta.company], ["Fecha", docMeta.date],
+    ]);
+    XLSX.utils.book_append_sheet(wb, metaWs, "Portada");
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Clases");
+    const fileName = (docMeta.docNumber || docMeta.title || "spec").replace(/[\\/:*?"<>|]/g, "-");
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+  };
+
+  const copyShareLink = (specId) => {
+    const url = `${window.location.origin}${window.location.pathname}?spec=${specId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(specId);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -319,7 +430,7 @@ export default function SpecBuilder() {
     setDocMeta({
       title: spec.title, project: spec.project, client: spec.client || "",
       docNumber: spec.doc_number, revision: spec.revision, company: spec.company,
-      confidential: spec.confidential, date: spec.date,
+      confidential: spec.confidential, serviceCoding: spec.service_coding, date: spec.date,
     });
     setSelected(classes.map((c) => {
       const plant = plants.find((p) => p.classes.some((k) => k.id === c.id));
@@ -356,6 +467,7 @@ export default function SpecBuilder() {
           {selected.map((s, i) => (
             <PrintClassPage key={s.item.id} item={s.item} plantName={s.plantName} docMeta={docMeta} index={i} total={selected.length} />
           ))}
+          {docMeta.serviceCoding && <ServiceIndexPage items={selected} catalog={serviceCatalog} codes={serviceCodes} />}
         </div>
         <style>{`
           @media print {
@@ -393,7 +505,7 @@ export default function SpecBuilder() {
               className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#2C568E] focus:outline-none bg-white" />
           </div>
           {plants.map((p) => (
-            <PlantColumn key={p.id} plant={p} selectedIds={selectedIds} onToggle={toggle} q={q} />
+            <PlantColumn key={p.id} plant={p} selectedIds={selectedIds} onToggle={toggle} onToggleGroup={toggleGroup} q={q} />
           ))}
         </div>
 
@@ -417,6 +529,10 @@ export default function SpecBuilder() {
               <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none pt-1">
                 <input type="checkbox" checked={docMeta.confidential} onChange={(e) => setDocMeta({ ...docMeta, confidential: e.target.checked })} className="accent-[#2C568E]" />
                 Marca de "Confidencial — uso interno" en el PDF
+              </label>
+              <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" checked={docMeta.serviceCoding} onChange={(e) => setDocMeta({ ...docMeta, serviceCoding: e.target.checked })} className="accent-[#2C568E]" />
+                Agregar índice de servicios codificado al final del PDF
               </label>
             </div>
           </div>
@@ -452,6 +568,13 @@ export default function SpecBuilder() {
               >
                 <Printer size={14} /> Ver documento
               </button>
+              <button
+                disabled={selected.length === 0}
+                onClick={downloadExcel}
+                className="col-span-2 flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-md border border-slate-200 text-slate-700 hover:border-[#7FC4EE] disabled:opacity-50"
+              >
+                <FileSpreadsheet size={14} /> Descargar Excel
+              </button>
             </div>
             {savedMsg && <div className="text-[12px] text-emerald-700 mt-2">{savedMsg}</div>}
           </div>
@@ -486,6 +609,9 @@ export default function SpecBuilder() {
                               {i === 0 && <span className="ml-1.5 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">más reciente</span>}
                             </div>
                             <div className="text-[11px] text-slate-400">{s.client ? `Para ${s.client} · ` : ""}{new Date(s.created_at).toLocaleDateString("es-AR")} · {s.created_by}</div>
+                          </button>
+                          <button onClick={() => copyShareLink(s.id)} title="Copiar link para compartir (solo lectura)" className="text-slate-300 hover:text-[#2C568E] shrink-0">
+                            {copiedId === s.id ? <Check size={14} className="text-emerald-600" /> : <Link2 size={14} />}
                           </button>
                           <button onClick={() => removeSaved(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>
                         </div>
