@@ -1,5 +1,13 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Settings, FileStack, Droplets, ChevronRight } from "lucide-react";
+
+const TAGLINES = [
+  "Generá clases de cañería en minutos, no en horas.",
+  "Compará dos clases lado a lado y encontrá la diferencia al toque.",
+  "Armá una spec para un cliente nuevo con plantillas ya cargadas.",
+  "Cada revisión guardada queda congelada — nunca cambia sola.",
+  "Un solo catálogo de servicios para todos los proyectos.",
+];
 
 const TOOLS = [
   {
@@ -28,6 +36,20 @@ const TOOLS = [
 const lastUpdated = new Date().toLocaleDateString("es-AR");
 
 export default function Home({ onOpen }) {
+  const [tagIndex, setTagIndex] = useState(0);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setTagIndex((i) => (i + 1) % TAGLINES.length);
+        setFade(true);
+      }, 350);
+    }, 3800);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="bg-[#F4F7FA] text-slate-900">
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
@@ -39,6 +61,12 @@ export default function Home({ onOpen }) {
             <p className="mt-4 max-w-lg text-[15px] text-slate-600 leading-relaxed">
               Herramientas centralizadas para el diseño, configuración y emisión de especificaciones de proyecto.
             </p>
+            <div className="mt-3 h-6 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00589E] shrink-0" />
+              <p className={`max-w-lg text-[13px] font-medium text-[#00589E] transition-opacity duration-300 ${fade ? "opacity-100" : "opacity-0"}`}>
+                {TAGLINES[tagIndex]}
+              </p>
+            </div>
           </div>
 
           <div className="text-[12.5px] border border-slate-300 bg-white self-start w-full max-w-[300px] lg:w-[300px] rounded-md overflow-hidden">
