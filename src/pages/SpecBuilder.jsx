@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   FileStack, Search, X, Printer, ArrowLeft, Building2, ShieldCheck, ShieldAlert,
   CheckSquare, Square, MinusSquare, FileWarning, Loader2, Save, FolderOpen, Trash2,
-  FileSpreadsheet, Link2, Check,
+  FileSpreadsheet, Link2, Check, StickyNote, RotateCcw, Plus,
 } from "lucide-react";
 import { FAMILIES, COMP_COLS, VALVE_COLS } from "../data/plants";
 import { fetchAllPlants, saveSpec, fetchSpecs, fetchSpecItems, fetchSpecById, deleteSpec, fetchServiceCatalog, computeServiceCodes, markReviewed, clearReviewed } from "../lib/api";
@@ -371,6 +371,15 @@ export default function SpecBuilder() {
   };
   const remove = (itemId) => setSelected((sel) => sel.filter((s) => s.item.id !== itemId));
 
+  const [editingNotesFor, setEditingNotesFor] = useState(null);
+  const setNotesFor = (itemId, notes) =>
+    setSelected((sel) => sel.map((s) => s.item.id === itemId
+      ? { ...s, item: { ...s.item, detail: { ...s.item.detail, notes } } } : s));
+  const restoreNotes = (itemId) => {
+    const master = plants.flatMap((p) => p.classes).find((k) => k.id === itemId);
+    if (master?.detail) setNotesFor(itemId, master.detail.notes);
+  };
+
   const toggleReviewed = async (s) => {
     if (s.item.reviewedBy) {
       await clearReviewed(s.item.id);
@@ -423,7 +432,7 @@ export default function SpecBuilder() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveSpec(docMeta, selected.map((s) => s.item.id));
+      await saveSpec(docMeta, selected);
       setSavedMsg("Especificación guardada.");
       setTimeout(() => setSavedMsg(""), 2500);
     } catch (e) {
@@ -441,22 +450,16 @@ export default function SpecBuilder() {
   };
 
   const loadSpec = async (spec) => {
-    const classes = await fetchSpecItems(spec.id);
+    const rows = await fetchSpecItems(spec.id);
     setDocMeta({
       title: spec.title, project: spec.project, client: spec.client || "",
       docNumber: spec.doc_number, revision: spec.revision, company: spec.company,
       confidential: spec.confidential, serviceCoding: spec.service_coding, date: spec.date,
     });
-    setSelected(classes.map((c) => {
-      const plant = plants.find((p) => p.classes.some((k) => k.id === c.id));
-      return {
-        plantId: plant?.id || "—", plantName: plant?.name || "—",
-        item: {
-          id: c.id, code: c.code, fam: c.fam, mat: c.mat, corr: c.corr, rating: c.rating,
-          design: c.design, services: c.services, page: c.page, detail: c.detail,
-          reviewedBy: c.reviewed_by, reviewedAt: c.reviewed_at, reviewedAgainst: c.reviewed_against,
-        },
-      };
+    setSelected(rows.map((r) => {
+      if (r.plantName) return r; // ya viene completo desde la foto congelada
+      const plant = plants.find((p) => p.classes.some((k) => k.id === r.item.id));
+      return { plantId: plant?.id || "—", plantName: plant?.name || "—", item: r.item };
     }));
     setShowSaved(false);
   };
@@ -562,20 +565,58 @@ export default function SpecBuilder() {
             {selected.length === 0 ? (
               <div className="text-[12px] text-slate-400">Todavía no elegiste ninguna clase.</div>
             ) : (
-              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+              <div className="space-y-1.5 max-h-96 overflow-y-auto">
                 {selected.map((s) => (
-                  <div key={s.item.id} className="flex items-center justify-between gap-2 text-[12px] px-2 py-1.5 rounded-md bg-slate-50">
-                    <span className="min-w-0 truncate"><span className="font-mono font-semibold">{s.item.code}</span> <span className="text-slate-400">· {s.plantName.split(" · ")[0]}</span></span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => toggleReviewed(s)}
-                        title={s.item.reviewedBy ? `Revisado por ${s.item.reviewedBy}` : "Marcar como revisado"}
-                        className={s.item.reviewedBy ? "text-emerald-600 hover:text-emerald-700" : "text-slate-300 hover:text-amber-500"}
-                      >
-                        {s.item.reviewedBy ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
-                      </button>
-                      <button onClick={() => remove(s.item.id)} className="text-slate-300 hover:text-red-500"><X size={13} /></button>
+                  <div key={s.item.id} className="rounded-md bg-slate-50">
+                    <div className="flex items-center justify-between gap-2 text-[12px] px-2 py-1.5">
+                      <span className="min-w-0 truncate"><span className="font-mono font-semibold">{s.item.code}</span> <span className="text-slate-400">· {s.plantName.split(" · ")[0]}</span></span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {s.item.detail && (
+                          <button
+                            onClick={() => setEditingNotesFor(editingNotesFor === s.item.id ? null : s.item.id)}
+                            title="Editar notas para este documento"
+                            className={editingNotesFor === s.item.id ? "text-[#2C568E]" : "text-slate-300 hover:text-[#2C568E]"}
+                          >
+                            <StickyNote size={14} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => toggleReviewed(s)}
+                          title={s.item.reviewedBy ? `Revisado por ${s.item.reviewedBy}` : "Marcar como revisado"}
+                          className={s.item.reviewedBy ? "text-emerald-600 hover:text-emerald-700" : "text-slate-300 hover:text-amber-500"}
+                        >
+                          {s.item.reviewedBy ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
+                        </button>
+                        <button onClick={() => remove(s.item.id)} className="text-slate-300 hover:text-red-500"><X size={13} /></button>
+                      </div>
                     </div>
+                    {editingNotesFor === s.item.id && s.item.detail && (
+                      <div className="px-2 pb-2.5 space-y-1.5 border-t border-slate-200 pt-2">
+                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Notas para este documento (no afecta la clase original)</div>
+                        {s.item.detail.notes.map((n, i) => (
+                          <div key={i} className="flex gap-1.5 items-start">
+                            <span className="text-[10px] font-mono text-slate-400 mt-1.5 shrink-0">{i + 1}.</span>
+                            <textarea
+                              value={n} rows={2}
+                              onChange={(e) => {
+                                const notes = s.item.detail.notes.slice();
+                                notes[i] = e.target.value;
+                                setNotesFor(s.item.id, notes);
+                              }}
+                              className="flex-1 text-[11.5px] px-1.5 py-1 border border-slate-200 rounded focus:border-[#3F72AC] focus:outline-none bg-white"
+                            />
+                            <button
+                              onClick={() => setNotesFor(s.item.id, s.item.detail.notes.filter((_, k) => k !== i))}
+                              className="text-slate-300 hover:text-red-500 mt-1.5 shrink-0"
+                            ><X size={12} /></button>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between pt-0.5">
+                          <button onClick={() => setNotesFor(s.item.id, [...s.item.detail.notes, ""])} className="text-[11px] text-[#1F3F6E] hover:text-[#173257] flex items-center gap-1"><Plus size={11} /> Agregar nota</button>
+                          <button onClick={() => restoreNotes(s.item.id)} className="text-[11px] text-slate-500 hover:text-slate-700 flex items-center gap-1"><RotateCcw size={11} /> Restaurar originales</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
