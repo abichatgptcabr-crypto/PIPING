@@ -12,6 +12,7 @@
   --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Barlow Condensed', var(--font-sans);
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-doc: 'Playfair Display', Georgia, serif;
 }
 
 body {
