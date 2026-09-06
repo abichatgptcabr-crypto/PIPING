@@ -156,7 +156,6 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
   const d = item.detail;
   return (
     <section className="print-page relative">
-      {docMeta.confidential && <Watermark />}
       <div className="relative" style={{ zIndex: 1 }}>
         <div className="flex items-stretch border-b-4 border-black mb-3">
           <div className="flex-1 pb-2">
@@ -235,7 +234,6 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
 export function PrintCoverPage({ docMeta, items, qrDataUrl }) {
   return (
     <section className="print-page relative">
-      {docMeta.confidential && <Watermark />}
       <div className="border-2 border-black h-full flex flex-col relative" style={{ zIndex: 1 }}>
         <div className="border-b-2 border-black p-6 text-center">
           {docMeta.clientLogoUrl ? (
@@ -246,7 +244,6 @@ export function PrintCoverPage({ docMeta, items, qrDataUrl }) {
           <div className="text-[26px] font-bold uppercase mb-1">{docMeta.title || "Piping Class"}</div>
           <div className="text-[13px] text-slate-600">Technical Specification</div>
           {docMeta.client && <div className="text-[12px] text-slate-500 mt-1">Preparado para: <b>{docMeta.client}</b></div>}
-          {docMeta.confidential && <div className="text-[10px] uppercase tracking-widest text-red-700 font-bold mt-3">Confidencial — uso interno</div>}
         </div>
         <div className="grid grid-cols-2 text-[10px] font-mono border-b-2 border-black">
           <div className="p-3 border-r border-black"><b>PROYECTO:</b> {docMeta.project || "—"}</div>
@@ -301,10 +298,7 @@ export function PrintCoverPage({ docMeta, items, qrDataUrl }) {
               QR al guardar
             </div>
           )}
-          <div>
-            Documento armado con el Generador de piping class de Hytech Tools — combina clases de más de un proyecto/estándar base. Verificar compatibilidad de códigos, condiciones de diseño y estado de revisión de cada clase antes de emitir para construcción.
-            {qrDataUrl && <div className="mt-1">Escaneá el código para ver la versión online de este documento.</div>}
-          </div>
+          {qrDataUrl && <div>Escaneá el código para ver la versión online de este documento.</div>}
         </div>
       </div>
     </section>
@@ -680,10 +674,6 @@ export default function SpecBuilder() {
                   )}
                 </div>
               ))}
-              <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none pt-1">
-                <input type="checkbox" checked={docMeta.confidential} onChange={(e) => setDocMeta({ ...docMeta, confidential: e.target.checked })} className="accent-[#00589E]" />
-                Marca de "Confidencial — uso interno" en el PDF
-              </label>
               <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
                 <input type="checkbox" checked={docMeta.serviceCoding} onChange={(e) => setDocMeta({ ...docMeta, serviceCoding: e.target.checked })} className="accent-[#00589E]" />
                 Agregar índice de servicios codificado al final del PDF
