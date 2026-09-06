@@ -162,7 +162,7 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
       <div className="relative" style={{ zIndex: 1 }}>
         <div className="flex items-stretch border-b-4 border-black mb-3">
           <div className="flex-1 pb-2">
-            <div className="text-[15px] font-bold uppercase">{docMeta.title || "Piping Class"}</div>
+            <div className="text-[16px] font-bold uppercase tracking-wide" style={{ fontFamily: "var(--font-doc)" }}>{docMeta.title || "Piping Class"}</div>
             <div className="text-[10px] text-slate-600">Technical Specification{docMeta.client ? ` — Preparado para ${docMeta.client}` : ""}</div>
             <div className="text-[9px] font-mono text-slate-500 mt-1">DOCUMENTO Nº: {docMeta.docNumber || "—"} · REVISIÓN: {docMeta.revision || "0"} · Clase {index + 1} de {total}</div>
           </div>
@@ -244,7 +244,7 @@ export function PrintCoverPage({ docMeta, items, qrDataUrl, revisionHistory }) {
           ) : (
             <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-2">{docMeta.company || "Hytech"}</div>
           )}
-          <div className="text-[26px] font-bold uppercase mb-1">{docMeta.title || "Piping Class"}</div>
+          <div className="text-[30px] font-bold uppercase mb-1 tracking-wide" style={{ fontFamily: "var(--font-doc)" }}>{docMeta.title || "Piping Class"}</div>
           <div className="text-[13px] text-slate-600">Technical Specification</div>
           {docMeta.client && <div className="text-[12px] text-slate-500 mt-1">Preparado para: <b>{docMeta.client}</b></div>}
         </div>
@@ -341,7 +341,7 @@ export function ServiceIndexPage({ items, catalog, codes }) {
   return (
     <section className="print-page">
       <header className="border-b-2 border-black pb-2 mb-3">
-        <div className="text-[15px] font-bold uppercase">Índice de servicios</div>
+        <div className="text-[16px] font-bold uppercase tracking-wide" style={{ fontFamily: "var(--font-doc)" }}>Índice de servicios</div>
         <div className="text-[10px] text-slate-600">Códigos de referencia para los servicios incluidos en este documento</div>
       </header>
       <table className="w-full text-[10px] font-mono border-collapse">
