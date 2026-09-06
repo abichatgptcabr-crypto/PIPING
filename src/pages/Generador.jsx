@@ -1072,7 +1072,7 @@ export default function Generador() {
           ) : (
             Object.entries(fams).map(([fam, list]) => (
               <div key={fam}>
-                <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">{FAMILIES[fam] || fam}</div>
+                <div className="inline-block text-[10.5px] font-semibold uppercase tracking-wider text-[#00589E] bg-[#EAF3FB] px-2.5 py-1 rounded mb-2">{FAMILIES[fam] || fam}</div>
                 <div className="grid sm:grid-cols-2 gap-3 mb-1">
                   {list.map((k) => <RegisterCard key={k.id} item={k} onOpen={(it) => setOpenId(it.id)} onToggle={handlers.toggle} onDuplicate={handlers.duplicate} onRemove={handlers.remove} />)}
                 </div>

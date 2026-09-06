@@ -49,10 +49,10 @@ function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
               <div key={fam}>
                 <button
                   onClick={() => onToggleGroup(plant, list, !allIn)}
-                  className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-slate-500 hover:text-[#00406E] mb-1.5"
+                  className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#00589E] bg-[#EAF3FB] hover:bg-[#d8e9f7] px-2.5 py-1 rounded mb-1.5"
                 >
-                  {allIn ? <CheckSquare size={12} className="text-[#00589E]" /> : someIn ? <MinusSquare size={12} className="text-[#00589E]" /> : <Square size={12} className="text-slate-300" />}
-                  {FAMILIES[fam] || fam} <span className="text-slate-400 normal-case">({list.length})</span>
+                  {allIn ? <CheckSquare size={12} className="text-[#00589E]" /> : someIn ? <MinusSquare size={12} className="text-[#00589E]" /> : <Square size={12} className="text-[#00589E]/40" />}
+                  {FAMILIES[fam] || fam} <span className="text-[#00589E]/60 normal-case">({list.length})</span>
                 </button>
                 <div className="grid sm:grid-cols-2 gap-1.5">
                   {list.map((k) => {
