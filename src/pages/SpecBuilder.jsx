@@ -48,7 +48,7 @@ function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
             return (
               <div key={fam}>
                 <button
-                  onClick={() => onToggleGroup(plant, list, !allIn)}
+                  onClick={() => onToggleGroup(list.map((k) => ({ plant, k })), !allIn)}
                   className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#00589E] bg-[#EAF3FB] hover:bg-[#d8e9f7] px-2.5 py-1 rounded mb-1.5"
                 >
                   {allIn ? <CheckSquare size={12} className="text-[#00589E]" /> : someIn ? <MinusSquare size={12} className="text-[#00589E]" /> : <Square size={12} className="text-[#00589E]/40" />}
@@ -81,6 +81,67 @@ function PlantColumn({ plant, selectedIds, onToggle, onToggleGroup, q }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// Igual que PlantColumn, pero agrupa cruzando TODAS las plantas por familia
+// de servicio en vez de por proyecto — cada tarjeta muestra de qué planta
+// viene, ya que dentro de un mismo grupo puede haber clases mezcladas.
+function ServiceGroupsView({ plants, selectedIds, onToggle, onToggleGroup, q }) {
+  const grouped = useMemo(() => {
+    const g = {};
+    plants.forEach((p) => p.classes.forEach((k) => {
+      if (q) {
+        const hay = (k.code + " " + k.services.join(" ") + " " + k.mat).toLowerCase();
+        if (!hay.includes(q.toLowerCase())) return;
+      }
+      (g[k.fam] ||= []).push({ plant: p, k });
+    }));
+    return Object.entries(g);
+  }, [plants, q]);
+
+  if (grouped.length === 0) return <div className="text-[12px] text-slate-400 py-6">Sin resultados para el filtro.</div>;
+
+  return (
+    <div className="space-y-4">
+      {grouped.map(([fam, entries]) => {
+        const allIn = entries.every((e) => selectedIds.has(e.k.id));
+        const someIn = !allIn && entries.some((e) => selectedIds.has(e.k.id));
+        return (
+          <div key={fam}>
+            <button
+              onClick={() => onToggleGroup(entries, !allIn)}
+              className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#00589E] bg-[#EAF3FB] hover:bg-[#d8e9f7] px-2.5 py-1 rounded mb-1.5"
+            >
+              {allIn ? <CheckSquare size={12} className="text-[#00589E]" /> : someIn ? <MinusSquare size={12} className="text-[#00589E]" /> : <Square size={12} className="text-[#00589E]/40" />}
+              {FAMILIES[fam] || fam} <span className="text-[#00589E]/60 normal-case">({entries.length})</span>
+            </button>
+            <div className="grid sm:grid-cols-2 gap-1.5">
+              {entries.map(({ plant, k }) => {
+                const checked = selectedIds.has(k.id);
+                return (
+                  <button
+                    key={k.id}
+                    onClick={() => onToggle(plant, k)}
+                    className={`flex items-start gap-2 text-left px-2.5 py-2 rounded-md border text-[12.5px] transition ${
+                      checked ? "border-[#00589E] bg-[#EAF3FB]" : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    {checked ? <CheckSquare size={14} className="text-[#00589E] mt-0.5 shrink-0" /> : <Square size={14} className="text-slate-300 mt-0.5 shrink-0" />}
+                    <span className="min-w-0">
+                      <span className="font-mono font-semibold text-slate-800">{k.code}</span>
+                      <span className="text-slate-500"> · {k.rating} · {k.mat}</span>
+                      {!k.detail && <span className="ml-1 text-[10px] text-slate-400">(sólo resumen)</span>}
+                      <div className="text-[10.5px] text-slate-400 mt-0.5 flex items-center gap-1"><Building2 size={10} /> {plant.name.split(" · ")[0]}</div>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -485,6 +546,7 @@ export default function SpecBuilder() {
   const [plants, setPlants] = useState([]);
   const [ready, setReady] = useState(false);
   const [q, setQ] = useState("");
+  const [groupMode, setGroupMode] = useState("project"); // 'project' | 'service'
   const [selected, setSelected] = useState([]); // [{ plantId, plantName, item }]
   const [mode, setMode] = useState("build"); // 'build' | 'print'
   const [saving, setSaving] = useState(false);
@@ -557,12 +619,14 @@ export default function SpecBuilder() {
         : [...sel, { plantId: plant.id, plantName: plant.name, item }]
     );
   };
-  const toggleGroup = (plant, list, addAll) => {
+  // entries: [{ plant, k }, ...] — funciona igual si todas son de la misma
+  // planta (agrupado por proyecto) o de varias (agrupado por servicio).
+  const toggleGroup = (entries, addAll) => {
     setSelected((sel) => {
-      const ids = new Set(list.map((k) => k.id));
+      const ids = new Set(entries.map((e) => e.k.id));
       const withoutGroup = sel.filter((s) => !ids.has(s.item.id));
       if (!addAll) return withoutGroup;
-      const toAdd = list.map((k) => ({ plantId: plant.id, plantName: plant.name, item: k }));
+      const toAdd = entries.map((e) => ({ plantId: e.plant.id, plantName: e.plant.name, item: e.k }));
       return [...withoutGroup, ...toAdd];
     });
   };
@@ -869,15 +933,30 @@ export default function SpecBuilder() {
 
           <div className="rounded-md border border-slate-200 bg-white shadow-sm p-4 mb-5">
             <StepBadge n={1} title="Paso 1 · Elegí las clases" desc="Buscá por código, servicio o material, y tildá una por una o un grupo entero de una vez." />
-            <div className="relative">
+            <div className="relative mb-3">
               <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar clase, servicio o material…"
                 className="w-full pl-8 pr-2 py-1.5 text-[13px] border border-slate-200 rounded-md focus:border-[#00589E] focus:outline-none bg-white" />
             </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10.5px] uppercase tracking-wider text-slate-400 mr-1">Agrupar:</span>
+              <button onClick={() => setGroupMode("project")}
+                className={`text-[12px] px-2.5 py-1 rounded-md border ${groupMode === "project" ? "bg-[#00589E] border-[#00589E] text-white" : "border-slate-200 text-slate-600 hover:border-[#00589E]"}`}>
+                Por proyecto
+              </button>
+              <button onClick={() => setGroupMode("service")}
+                className={`text-[12px] px-2.5 py-1 rounded-md border ${groupMode === "service" ? "bg-[#00589E] border-[#00589E] text-white" : "border-slate-200 text-slate-600 hover:border-[#00589E]"}`}>
+                Por servicio
+              </button>
+            </div>
           </div>
-          {plants.map((p) => (
-            <PlantColumn key={p.id} plant={p} selectedIds={selectedIds} onToggle={toggle} onToggleGroup={toggleGroup} q={q} />
-          ))}
+          {groupMode === "project" ? (
+            plants.map((p) => (
+              <PlantColumn key={p.id} plant={p} selectedIds={selectedIds} onToggle={toggle} onToggleGroup={toggleGroup} q={q} />
+            ))
+          ) : (
+            <ServiceGroupsView plants={plants} selectedIds={selectedIds} onToggle={toggle} onToggleGroup={toggleGroup} q={q} />
+          )}
         </div>
 
         <div className="space-y-4">
