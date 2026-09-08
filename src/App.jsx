@@ -5,7 +5,7 @@ import Generador from "./pages/Generador";
 import SpecBuilder from "./pages/SpecBuilder";
 import ServiceCatalog from "./pages/ServiceCatalog";
 import ViewSpec from "./pages/ViewSpec";
-import AuthGate from "./components/AuthGate";
+import PasswordGate from "./components/PasswordGate";
 import hytechLogoWhite from "./assets/hytech-logo-white.png";
 import { SEED_PLANTS } from "./data/plants";
 import { syncFromSeed } from "./lib/api";
@@ -40,7 +40,7 @@ export default function App() {
   if (sharedSpecId) return <ViewSpec specId={sharedSpecId} />;
 
   return (
-    <AuthGate>
+    <PasswordGate>
       <div className="min-h-screen flex flex-col">
       <header className="print:hidden bg-[#00589E] sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
@@ -88,6 +88,6 @@ export default function App() {
         </div>
       </footer>
       </div>
-    </AuthGate>
+    </PasswordGate>
   );
 }
