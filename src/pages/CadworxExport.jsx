@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { HardDrive, Loader2, CheckCircle2, AlertTriangle, Download, ChevronRight } from "lucide-react";
 import { fetchSpecs, fetchSpecItems } from "../lib/api";
-import { matchComponent } from "../lib/cadworxMatch";
+import { matchRows } from "../lib/cadworxMatch";
 
 function buildCadworxXml(docMeta, items) {
   const esc = (s) => (s || "").toString().replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const specs = items.map((it) => {
     const d = it.item.detail;
     const rows = d ? [...d.comps, ...d.valves] : [];
-    const comps = rows.map((r) => {
-      const { match } = matchComponent(r);
+    const comps = matchRows(rows).map(({ row: r, match }) => {
       if (match) {
         return `      <Component Name="${esc(match.name)}" LongDesc="${esc(match.long)}" Type="${match.type}" CategoryType="${match.category}" ProgramCode="${match.programCode}" SourceRow="${esc(r.join(" | "))}"/>`;
       }
@@ -72,8 +71,7 @@ export default function CadworxExport() {
     items.forEach((it) => {
       const d = it.item.detail;
       if (!d) { noDetail++; return; }
-      [...d.comps, ...d.valves].forEach((r) => {
-        const { match } = matchComponent(r);
+      matchRows([...d.comps, ...d.valves]).forEach(({ match }) => {
         if (match) matched++; else unmatched++;
       });
     });
@@ -104,11 +102,16 @@ export default function CadworxExport() {
             <div className="h-[3px] w-10 bg-[#00589E] mt-2" />
           </div>
         </div>
-        <p className="text-[13px] text-slate-500 mb-5 max-w-2xl">
+        <p className="text-[13px] text-slate-500 mb-2 max-w-2xl">
           Elegí una especificación ya guardada en "Armar especificación" y generá un borrador de catálogo para CADWorx.
           Los componentes con coincidencia confirmada llevan el código real del programa; los que no, quedan marcados
           para definir a mano en el Spec Editor — no se inventa ningún código.
         </p>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 mb-5 text-[12px] text-amber-800 max-w-2xl">
+          <b>Importante:</b> "confirmado" acá significa que el tipo de componente (caño, brida, válvula) es real y verificado.
+          Todavía no incluye la tabla dimensional (tamaños/geometría 3D) de cada componente — eso vive en los catálogos de
+          CADWorx y hay que completarlo ahí antes de dar por terminada la especificación.
+        </div>
 
         <div className="grid md:grid-cols-[280px_1fr] gap-4">
           <div className="rounded-md border border-slate-200 bg-white shadow-sm p-3 space-y-1 max-h-[60vh] overflow-y-auto">
@@ -164,7 +167,7 @@ export default function CadworxExport() {
                   {items.map((it) => {
                     const d = it.item.detail;
                     const rows = d ? [...d.comps, ...d.valves] : [];
-                    const m = rows.filter((r) => matchComponent(r).match).length;
+                    const m = matchRows(rows).filter((x) => x.match).length;
                     return (
                       <div key={it.item.id} className="flex items-center justify-between text-[12px] px-2 py-1.5 rounded bg-slate-50">
                         <span className="font-mono font-medium">{it.item.code}</span>
