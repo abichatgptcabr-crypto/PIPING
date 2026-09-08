@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Generador from "./pages/Generador";
 import SpecBuilder from "./pages/SpecBuilder";
 import ServiceCatalog from "./pages/ServiceCatalog";
+import CadworxExport from "./pages/CadworxExport";
 import ViewSpec from "./pages/ViewSpec";
 import PasswordGate from "./components/PasswordGate";
 import hytechLogoWhite from "./assets/hytech-logo-white.png";
@@ -14,6 +15,7 @@ const PAGE_TITLES = {
   generador: "Generador de piping class",
   "spec-builder": "Armar especificación",
   "service-catalog": "Catálogo de servicios",
+  "cadworx-export": "Generar SPEC CADWorx",
 };
 
 export default function App() {
@@ -78,6 +80,7 @@ export default function App() {
             {page === "generador" && <Generador />}
             {page === "spec-builder" && <SpecBuilder />}
             {page === "service-catalog" && <ServiceCatalog />}
+            {page === "cadworx-export" && <CadworxExport />}
           </>
         )}
       </main>
