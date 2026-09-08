@@ -253,11 +253,10 @@ export function PrintClassPage({ item, plantName, docMeta, index, total }) {
         </div>
         <div className="text-[9px] mb-1"><b>SERVICE:</b> {item.services.join(" / ")}</div>
         <div className="text-[9px] mb-3 text-slate-500">
-          Origen: {plantName} · clase {item.code}{item.page ? ` · pág. ${item.page} doc. fuente` : ""}
           {item.reviewedBy ? (
-            <span className="ml-2 text-emerald-700"><ShieldCheck size={9} className="inline -mt-0.5" /> revisado por {item.reviewedBy} el {new Date(item.reviewedAt).toLocaleDateString("es-AR")}{item.reviewedAgainst ? ` contra ${item.reviewedAgainst}` : ""}</span>
+            <span className="text-emerald-700"><ShieldCheck size={9} className="inline -mt-0.5" /> revisado por {item.reviewedBy} el {new Date(item.reviewedAt).toLocaleDateString("es-AR")}{item.reviewedAgainst ? ` contra ${item.reviewedAgainst}` : ""}</span>
           ) : (
-            <span className="ml-2 text-amber-600">sin marcar como revisado</span>
+            <span className="text-amber-600">sin marcar como revisado</span>
           )}
         </div>
 
@@ -321,7 +320,7 @@ export function PrintCoverPage({ docMeta, items, qrDataUrl, revisionHistory }) {
             <thead>
               <tr className="border-b border-black">
                 <th className="text-left py-1">Ítem</th><th className="text-left py-1">Clase</th>
-                <th className="text-left py-1">Origen</th><th className="text-left py-1">Servicio</th>
+                <th className="text-left py-1">Servicio</th>
                 <th className="text-left py-1">Rating</th><th className="text-left py-1">Material</th>
                 <th className="text-left py-1">Revisado</th>
               </tr>
@@ -331,7 +330,6 @@ export function PrintCoverPage({ docMeta, items, qrDataUrl, revisionHistory }) {
                 <tr key={i} className="border-b border-slate-300">
                   <td className="py-1">{i + 1}</td>
                   <td className="py-1 font-bold">{it.item.code}</td>
-                  <td className="py-1">{it.plantName}</td>
                   <td className="py-1">{it.item.services[0]}{it.item.services.length > 1 ? " …" : ""}</td>
                   <td className="py-1">{it.item.rating}</td>
                   <td className="py-1">{it.item.mat}</td>
@@ -704,7 +702,6 @@ export default function SpecBuilder() {
     const rows = selected.map((s, i) => ({
       "Ítem": i + 1,
       "Código": s.item.code,
-      "Origen": s.plantName,
       "Familia": FAMILIES[s.item.fam] || s.item.fam,
       "Servicio": s.item.services.join(" / "),
       "Material": s.item.mat,

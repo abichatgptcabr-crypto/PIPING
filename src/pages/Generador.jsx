@@ -14,7 +14,7 @@ import {
   deletePlant as apiDeletePlant, fetchRevisions, bulkInsertClasses, resetPlantClasses,
   fetchSpecsForClass,
 } from "../lib/api";
-import { useAuth } from "../components/AuthGate";
+import { useAccess } from "../components/PasswordGate";
 import { useToast, Toast } from "../components/Toast";
 
 /* ═══════════════════════════════ UI ════════════════════════════════════ */
@@ -522,7 +522,7 @@ function RegisterCard({ item, onOpen, onToggle, onDuplicate, onRemove }) {
   );
 }
 
-function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) {
+function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete, userName, onSignOut }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const active = plants.find((p) => p.id === activeId);
@@ -545,6 +545,10 @@ function PlantBar({ plants, activeId, setActiveId, onNew, onRename, onDelete }) 
           <button onClick={() => setRenaming(true)} className="p-1.5 text-slate-400 hover:text-slate-700" title="Renombrar"><Pencil size={14} /></button>
         )}
         {plants.length > 1 && <button onClick={() => onDelete(activeId)} className="p-1.5 text-slate-400 hover:text-red-500" title="Eliminar tipo de planta"><Trash2 size={14} /></button>}
+        <div className="flex items-center gap-2 text-[12px] text-slate-500 ml-1">
+          <span>{userName}</span>
+          <button onClick={onSignOut} className="text-slate-400 hover:text-red-500" title="Cambiar de usuario">salir</button>
+        </div>
         <div className="relative ml-auto">
           <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[13px] px-3 py-1.5 rounded-md border border-slate-200 text-slate-700 hover:border-[#4DA8DC]"><Plus size={14} /> Nuevo tipo de planta</button>
           {menu && (
@@ -803,7 +807,7 @@ function CompareView({ plants, onClose }) {
 }
 
 export default function Generador() {
-  const { email, signOut } = useAuth();
+  const { name, signOut } = useAccess();
   const [plants, setPlants] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [ready, setReady] = useState(false);
@@ -1006,7 +1010,8 @@ export default function Generador() {
   return (
     <div className="bg-slate-100 text-slate-900" style={{ fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}>
       <PlantBar plants={plants} activeId={activeId} setActiveId={setActiveId}
-        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant} />
+        onNew={handlers.newPlant} onRename={handlers.renamePlant} onDelete={handlers.deletePlant}
+        userName={name} onSignOut={signOut} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6">
         <div className="space-y-5 order-2 lg:order-1">
