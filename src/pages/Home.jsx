@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Settings, FileStack, Droplets, ChevronRight, Layers, Building2 } from "lucide-react";
+import { Settings, FileStack, Droplets, HardDrive, ChevronRight, Layers, Building2 } from "lucide-react";
 import { fetchStats } from "../lib/api";
 
 const TAGLINES = [
@@ -52,6 +52,14 @@ const TOOLS = [
     desc: "Todos los servicios cargados, de cualquier proyecto, agrupados por tipo, con descripción y codificación para documentos.",
     icon: Droplets,
     accent: "#00406E",
+  },
+  {
+    id: "cadworx-export",
+    status: "activo",
+    title: "Generar SPEC CADWorx",
+    desc: "Elegí una especificación ya guardada y generá un borrador de catálogo para CADWorx, con los componentes confirmados contra catálogos reales.",
+    icon: HardDrive,
+    accent: "#4DA8DC",
   },
 ];
 
