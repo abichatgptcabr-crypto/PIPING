@@ -1,9 +1,8 @@
 import { CADWORX_DICTIONARY } from "../data/cadworxDictionary";
 
-// Reglas de palabras clave → (type, category) esperado, para achicar candidatos
-// antes de elegir el mejor. No es magia: es la misma lógica que usarías vos
-// mirando la descripción de un componente y decidiendo qué botón tocar en
-// CADWorx Spec Editor.
+// Reglas de palabras clave → tipo general esperado. Sólo filtran candidatos
+// dentro de esa categoría — la variante puntual (material, schedule, extremos)
+// se decide después, por superposición de palabras real.
 const RULES = [
   { re: /\bpipe\b/i, type: 3 },
   { re: /45.?(°|deg)?\s*ell|45.?l\b/i, type: 5 },
@@ -54,20 +53,38 @@ function tokenize(s) {
   return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ").filter(Boolean);
 }
 
-// Busca la mejor coincidencia real en el diccionario para una fila de
-// componente nuestra (comps/valves). Devuelve { match, score } — match es
-// null si no hay nada suficientemente parecido.
-export function matchComponent(row) {
-  const text = row.join(" ");
-  const rule = RULES.find((r) => r.re.test(text));
-  const candidates = rule ? CADWORX_DICTIONARY.filter((d) => d.type === rule.type) : CADWORX_DICTIONARY;
+// row: la fila actual. prevDescription: la Descripción de la fila anterior
+// (para heredar contexto en filas de continuación, que dejan ese campo
+// vacío a propósito — sin esto, una fila de continuación no tiene ninguna
+// palabra clave propia y termina "matcheando" cualquier cosa al azar).
+export function matchComponent(row, prevDescription) {
+  const effectiveDesc = row[0] && row[0].trim() ? row[0] : (prevDescription || "");
+  const text = [effectiveDesc, ...row.slice(1)].join(" ");
 
+  const rule = RULES.find((r) => r.re.test(text));
+  if (!rule) return { match: null, score: 0 }; // sin regla clara → no se adivina
+
+  const candidates = CADWORX_DICTIONARY.filter((d) => d.type === rule.type);
   const tokens = new Set(tokenize(text));
+
   let best = null, bestScore = 0;
   for (const cand of candidates) {
     const candTokens = tokenize(cand.long + " " + cand.name);
     const overlap = candTokens.filter((t) => tokens.has(t)).length;
     if (overlap > bestScore) { bestScore = overlap; best = cand; }
   }
-  return bestScore >= 2 ? { match: best, score: bestScore } : { match: null, score: bestScore };
+  // Umbral más exigente: sólo se acepta si hay coincidencia real de
+  // material/schedule/extremos, no sólo la categoría general.
+  return bestScore >= 3 ? { match: best, score: bestScore } : { match: null, score: bestScore };
+}
+
+// Aplica matchComponent a una lista de filas en orden, pasando el contexto
+// de la fila anterior para las filas de continuación (Descripción vacía).
+export function matchRows(rows) {
+  let prevDesc = "";
+  return rows.map((r) => {
+    const result = matchComponent(r, prevDesc);
+    if (r[0] && r[0].trim()) prevDesc = r[0];
+    return { row: r, ...result };
+  });
 }
