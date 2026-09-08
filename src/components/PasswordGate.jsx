@@ -20,13 +20,14 @@ export default function PasswordGate({ children }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const submit = async (e) => {
+ const submit = async (e) => {
     e.preventDefault();
     setError("");
     if (!name.trim()) { setError("Ingresá tu nombre."); return; }
     setLoading(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("check-password", { body: { password } });
+      // Cambio realizado en la siguiente línea ("rapid-handler" en lugar de "check-password"):
+      const { data, error: fnError } = await supabase.functions.invoke("rapid-handler", { body: { password } });
       if (fnError) throw fnError;
       if (!data?.ok) { setError("Contraseña incorrecta."); return; }
       const entry = { name: name.trim() };
