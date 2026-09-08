@@ -1,9 +1,34 @@
 import { supabase } from "./supabaseClient";
 
 /* ═══════════════════════════ Sesión ═══════════════════════════════════ */
+// El "quién hizo qué" ahora sale del nombre que la persona escribió al
+// entrar (guardado en localStorage por PasswordGate) — ya no del login por
+// mail, que se sacó por el límite de envío del plan gratis de Supabase.
 export async function getCurrentUserEmail() {
-  const { data } = await supabase.auth.getUser();
-  return data?.user?.email || "desconocido";
+  try {
+    const stored = JSON.parse(localStorage.getItem("hytech-tools-access"));
+    return stored?.name || "desconocido";
+  } catch {
+    return "desconocido";
+  }
+}
+
+// Registro de acceso: nombre autoreportado + IP pública (útil para
+// confirmar que vino de la red de oficina) + navegador. No es una
+// identidad verificada, es un registro informativo.
+export async function logAccess(name) {
+  let ip = null;
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    const data = await res.json();
+    ip = data.ip;
+  } catch {
+    // sin conexión al servicio de IP, seguimos igual sin bloquear el acceso
+  }
+  const { error } = await supabase.from("access_log").insert({
+    name, ip, user_agent: navigator.userAgent,
+  });
+  if (error) throw error;
 }
 
 /* ═══════════════════════════ Lectura ═══════════════════════════════════ */
