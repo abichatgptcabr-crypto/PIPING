@@ -80,7 +80,7 @@ export default function App() {
           <div className="min-h-[70vh] flex items-center justify-center text-red-500 text-sm px-6 text-center">{dbError}</div>
         ) : (
           <>
-            {page === "home" && <Home />}
+            {page === "home" && <Home onOpen={setPage} />}
             {page === "generador" && <Generador />}
             {page === "spec-builder" && <SpecBuilder />}
             {page === "service-catalog" && <ServiceCatalog />}
