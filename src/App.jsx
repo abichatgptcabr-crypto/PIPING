@@ -7,6 +7,7 @@ import ServiceCatalog from "./pages/ServiceCatalog";
 import CadworxExport from "./pages/CadworxExport";
 import ViewSpec from "./pages/ViewSpec";
 import PasswordGate from "./components/PasswordGate";
+import Sidebar from "./components/Sidebar";
 import hytechLogoWhite from "./assets/hytech-logo-white.png";
 import { SEED_PLANTS } from "./data/plants";
 import { syncFromSeed } from "./lib/api";
@@ -44,6 +45,7 @@ export default function App() {
   return (
     <PasswordGate>
       <div className="min-h-screen flex flex-col">
+      <Sidebar currentPage={page} onNavigate={setPage} />
       <header className="print:hidden bg-[#00589E] sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <button onClick={() => setPage("home")} className="flex items-center gap-2 shrink-0">
