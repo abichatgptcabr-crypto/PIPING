@@ -69,6 +69,12 @@ export default function Home({ onOpen }) {
   const [tagIndex, setTagIndex] = useState(0);
   const [fade, setFade] = useState(true);
   const [stats, setStats] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("hytech-tools-seen-welcome"));
+
+  const dismissWelcome = () => {
+    localStorage.setItem("hytech-tools-seen-welcome", "1");
+    setShowWelcome(false);
+  };
 
   useEffect(() => {
     fetchStats().then(setStats).catch(() => setStats(null));
@@ -87,6 +93,19 @@ export default function Home({ onOpen }) {
 
   return (
     <div className="bg-[#F4F7FA] text-slate-900">
+      {showWelcome && (
+        <div className="bg-[#113044] text-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-start sm:items-center gap-3 text-[12.5px]">
+            <span className="text-lg leading-none">👋</span>
+            <p className="flex-1 leading-relaxed">
+              <b>¿Primera vez acá?</b> Para armar un documento para un cliente, andá a <b>"Armar especificación"</b>.
+              Para ver o editar el detalle de una clase, es <b>"Generador de piping class"</b>.
+              Toda la ayuda paso a paso está en <b>"Ayuda"</b> — abrila desde el menú del borde izquierdo.
+            </p>
+            <button onClick={dismissWelcome} className="shrink-0 text-white/60 hover:text-white text-[16px] leading-none">✕</button>
+          </div>
+        </div>
+      )}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div>
