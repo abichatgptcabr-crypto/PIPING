@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Settings, FileStack, Droplets, HardDrive, ChevronRight, Layers, Building2 } from "lucide-react";
+import { Layers, FileStack, Droplets, Building2, ChevronLeft } from "lucide-react";
 import { fetchStats } from "../lib/api";
 
 const TAGLINES = [
@@ -28,53 +28,10 @@ function CountUp({ target }) {
   return <>{n}</>;
 }
 
-const TOOLS = [
-  {
-    id: "generador",
-    status: "activo",
-    title: "Generador de piping class",
-    desc: "Configuración y ensamblaje de clases de cañería y componentes pre-cargados según normativas vigentes (ASME B31.3).",
-    icon: Settings,
-    accent: "#113044",
-  },
-  {
-    id: "spec-builder",
-    status: "activo",
-    title: "Armar especificación",
-    desc: "Consolidación de clases de más de un proyecto para exportación y emisión de especificaciones en PDF.",
-    icon: FileStack,
-    accent: "#00589E",
-  },
-  {
-    id: "service-catalog",
-    status: "activo",
-    title: "Catálogo de servicios",
-    desc: "Todos los servicios cargados, de cualquier proyecto, agrupados por tipo, con descripción y codificación para documentos.",
-    icon: Droplets,
-    accent: "#00406E",
-  },
-  {
-    id: "cadworx-export",
-    status: "activo",
-    title: "Generar SPEC CADWorx",
-    desc: "Elegí una especificación ya guardada y generá un borrador de catálogo para CADWorx, con los componentes confirmados contra catálogos reales.",
-    icon: HardDrive,
-    accent: "#4DA8DC",
-  },
-];
-
-const lastUpdated = new Date().toLocaleDateString("es-AR");
-
-export default function Home({ onOpen }) {
+export default function Home() {
   const [tagIndex, setTagIndex] = useState(0);
   const [fade, setFade] = useState(true);
   const [stats, setStats] = useState(null);
-  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("hytech-tools-seen-welcome"));
-
-  const dismissWelcome = () => {
-    localStorage.setItem("hytech-tools-seen-welcome", "1");
-    setShowWelcome(false);
-  };
 
   useEffect(() => {
     fetchStats().then(setStats).catch(() => setStats(null));
@@ -92,52 +49,45 @@ export default function Home({ onOpen }) {
   }, []);
 
   return (
-    <div className="bg-[#F4F7FA] text-slate-900">
-      {showWelcome && (
-        <div className="bg-[#113044] text-white">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-start sm:items-center gap-3 text-[12.5px]">
-            <span className="text-lg leading-none">👋</span>
-            <p className="flex-1 leading-relaxed">
-              <b>¿Primera vez acá?</b> Para armar un documento para un cliente, andá a <b>"Armar especificación"</b>.
-              Para ver o editar el detalle de una clase, es <b>"Generador de piping class"</b>.
-              Toda la ayuda paso a paso está en <b>"Ayuda"</b> — abrila desde el menú del borde izquierdo.
+    <div className="bg-white text-slate-900">
+      {/* Hero de punta a punta, oscuro, con textura técnica sutil */}
+      <div className="relative bg-[#113044] overflow-hidden">
+        <svg className="absolute inset-0 w-full h-full opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="white" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#00589E] opacity-20 blur-3xl" />
+
+        <div className="relative min-h-[60vh] flex flex-col items-center justify-center text-center px-4 py-20">
+          <div className="text-[12px] font-display uppercase tracking-[0.25em] text-[#4DA8DC] mb-4">Hytech Tools</div>
+          <h1 className="font-display text-[2.8rem] sm:text-[4.5rem] leading-[1.02] font-bold text-white max-w-4xl">
+            Gestor de Especificaciones Técnicas
+          </h1>
+          <p className="mt-5 max-w-lg text-[15px] text-white/70 leading-relaxed">
+            Herramientas centralizadas para el diseño, configuración y emisión de especificaciones de proyecto.
+          </p>
+
+          <div className="mt-5 h-6 flex items-center justify-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4DA8DC] shrink-0" />
+            <p className={`max-w-lg text-[13px] font-medium text-[#4DA8DC] transition-opacity duration-300 ${fade ? "opacity-100" : "opacity-0"}`}>
+              {TAGLINES[tagIndex]}
             </p>
-            <button onClick={dismissWelcome} className="shrink-0 text-white/60 hover:text-white text-[16px] leading-none">✕</button>
-          </div>
-        </div>
-      )}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-start">
-          <div>
-            <h1 className="font-display text-[2.6rem] sm:text-[3.4rem] leading-[1.02] font-bold text-[#113044]">
-              Gestor de Especificaciones Técnicas
-            </h1>
-            <p className="mt-4 max-w-lg text-[15px] text-slate-600 leading-relaxed">
-              Herramientas centralizadas para el diseño, configuración y emisión de especificaciones de proyecto.
-            </p>
-            <div className="mt-3 h-6 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00589E] shrink-0" />
-              <p className={`max-w-lg text-[13px] font-medium text-[#00589E] transition-opacity duration-300 ${fade ? "opacity-100" : "opacity-0"}`}>
-                {TAGLINES[tagIndex]}
-              </p>
-            </div>
           </div>
 
-          <div className="text-[12.5px] border border-slate-300 bg-white self-start w-full max-w-[300px] lg:w-[300px] rounded-md overflow-hidden">
-            <div className="flex justify-between px-4 py-2.5 border-b border-slate-200">
-              <span className="text-slate-400">VERSIÓN DEL SISTEMA:</span>
-              <span className="font-medium text-slate-800">1.0</span>
-            </div>
-            <div className="flex justify-between px-4 py-2.5">
-              <span className="text-slate-400">ÚLTIMA ACTUALIZACIÓN:</span>
-              <span className="font-medium text-slate-800">{lastUpdated}</span>
-            </div>
+          <div className="mt-12 flex items-center gap-2 text-[13px] text-white/50 animate-pulse">
+            <ChevronLeft size={16} className="text-[#4DA8DC]" />
+            Elegí una herramienta en el menú del borde izquierdo
           </div>
         </div>
-      </section>
+      </div>
 
+      {/* Estadísticas en vivo, sobre fondo claro */}
       {stats && (
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-8 pb-16 relative">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               [Layers, "Clases cargadas", stats.classCount],
@@ -145,64 +95,17 @@ export default function Home({ onOpen }) {
               [Droplets, "Servicios en catálogo", stats.serviceCount],
               [Building2, "Proyectos", stats.plantCount],
             ].map(([Icon, label, value]) => (
-              <div key={label} className="rounded-md border border-slate-200 bg-white px-4 py-3 flex items-center gap-3">
+              <div key={label} className="rounded-md border border-slate-200 bg-white shadow-md px-4 py-4 flex items-center gap-3">
                 <Icon size={18} className="text-[#00589E] shrink-0" />
-                <div>
+                <div className="text-left">
                   <div className="font-display text-[22px] font-bold leading-none text-[#113044]"><CountUp target={value} /></div>
-                  <div className="text-[11px] text-slate-500">{label}</div>
+                  <div className="text-[10.5px] text-slate-500">{label}</div>
                 </div>
               </div>
             ))}
           </div>
-        </section>
-      )}
-
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
-        <div className="text-[12px] font-display uppercase tracking-[0.12em] text-slate-500 mb-4">Herramientas clave</div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          {TOOLS.map((t) => {
-            const active = t.status === "activo";
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.id}
-                disabled={!active}
-                onClick={() => active && onOpen(t.id)}
-                style={active ? { borderTopColor: t.accent } : undefined}
-                className={`group relative text-left rounded-md border border-t-[3px] p-5 transition-all duration-200 ${
-                  active
-                    ? "border-slate-200 bg-white hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-                    : "border-slate-200 bg-white/60 cursor-default"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-11 h-11 rounded-md flex items-center justify-center shrink-0 transition-transform duration-200 ${active ? "group-hover:scale-105" : "bg-slate-200"}`}
-                    style={active ? { backgroundColor: t.accent } : undefined}
-                  >
-                    <Icon size={20} className={active ? "text-[#4DA8DC]" : "text-slate-400"} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className={`text-[15px] font-semibold ${active ? "text-slate-900" : "text-slate-500"}`}>{t.title}</h3>
-                    <p className="mt-1.5 text-[13px] text-slate-500 leading-relaxed">{t.desc}</p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className={`text-[10.5px] font-medium px-2 py-0.5 rounded ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {t.status}
-                      </span>
-                      {active && (
-                        <span className="flex items-center gap-0.5 text-[12.5px] font-semibold uppercase tracking-wide" style={{ color: t.accent }}>
-                          Abrir <ChevronRight size={14} className="transition-transform duration-200 group-hover:translate-x-1" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
         </div>
-      </section>
+      )}
     </div>
   );
 }
