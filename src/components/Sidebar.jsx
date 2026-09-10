@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  Home, Settings, FileStack, Droplets, HardDrive, Search, ChevronRight, Menu, X,
+  Home, Settings, FileStack, Droplets, HardDrive, Search, ChevronRight, Menu, X, HelpCircle,
 } from "lucide-react";
 
 const PAGES = [
@@ -9,6 +9,7 @@ const PAGES = [
   { id: "spec-builder", label: "Armar especificación", icon: FileStack },
   { id: "service-catalog", label: "Catálogo de servicios", icon: Droplets },
   { id: "cadworx-export", label: "Generar SPEC CADWorx", icon: HardDrive },
+  { id: "help", label: "Ayuda", icon: HelpCircle },
 ];
 
 // Funciones buscables — no todas tienen página propia, así que cada una
