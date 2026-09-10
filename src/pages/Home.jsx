@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layers, FileStack, Droplets, Building2, ChevronLeft } from "lucide-react";
+import { Layers, FileStack, Droplets, Building2, ChevronLeft, Settings, HardDrive, ChevronRight } from "lucide-react";
 import { fetchStats } from "../lib/api";
 
 const TAGLINES = [
@@ -8,6 +8,13 @@ const TAGLINES = [
   "Armá una spec para un cliente nuevo con plantillas ya cargadas.",
   "Cada revisión guardada queda congelada — nunca cambia sola.",
   "Un solo catálogo de servicios para todos los proyectos.",
+];
+
+const TOOLS = [
+  { id: "generador", title: "Generador de piping class", desc: "Registro completo de clases, edición, comparador y control de revisión.", icon: Settings, accent: "#113044" },
+  { id: "spec-builder", title: "Armar especificación", desc: "Elegí clases de cualquier proyecto y armá el documento para el cliente.", icon: FileStack, accent: "#00589E" },
+  { id: "service-catalog", title: "Catálogo de servicios", desc: "Todos los servicios, agrupados y codificados para los documentos.", icon: Droplets, accent: "#00406E" },
+  { id: "cadworx-export", title: "Generar SPEC CADWorx", desc: "Convertí una especificación guardada en un borrador de catálogo para CADWorx.", icon: HardDrive, accent: "#4DA8DC" },
 ];
 
 function CountUp({ target }) {
@@ -28,7 +35,7 @@ function CountUp({ target }) {
   return <>{n}</>;
 }
 
-export default function Home() {
+export default function Home({ onOpen }) {
   const [tagIndex, setTagIndex] = useState(0);
   const [fade, setFade] = useState(true);
   const [stats, setStats] = useState(null);
@@ -52,14 +59,6 @@ export default function Home() {
     <div className="bg-white text-slate-900">
       {/* Hero de punta a punta, oscuro, con textura técnica sutil */}
       <div className="relative bg-[#113044] overflow-hidden">
-        <svg className="absolute inset-0 w-full h-full opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
-              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="white" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
         <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#00589E] opacity-20 blur-3xl" />
 
         <div className="relative min-h-[60vh] flex flex-col items-center justify-center text-center px-4 py-20">
@@ -85,9 +84,37 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Estadísticas en vivo, sobre fondo claro */}
+      {/* Cuadrados grandes para elegir herramienta */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
+        <div className="grid sm:grid-cols-2 gap-4">
+          {TOOLS.map((t) => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                onClick={() => onOpen(t.id)}
+                style={{ borderTopColor: t.accent }}
+                className="group text-left aspect-square sm:aspect-[4/3] rounded-md border border-t-[4px] border-slate-200 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 p-6 flex flex-col justify-between"
+              >
+                <div className="w-14 h-14 rounded-md flex items-center justify-center transition-transform duration-200 group-hover:scale-105" style={{ backgroundColor: t.accent }}>
+                  <Icon size={26} className="text-[#4DA8DC]" />
+                </div>
+                <div>
+                  <h3 className="font-display text-[20px] font-bold uppercase tracking-wide text-[#113044]">{t.title}</h3>
+                  <p className="mt-2 text-[13px] text-slate-500 leading-relaxed">{t.desc}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold uppercase tracking-wide" style={{ color: t.accent }}>
+                    Abrir <ChevronRight size={14} className="transition-transform duration-200 group-hover:translate-x-1" />
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Estadísticas en vivo */}
       {stats && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-8 pb-16 relative">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 relative">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               [Layers, "Clases cargadas", stats.classCount],
