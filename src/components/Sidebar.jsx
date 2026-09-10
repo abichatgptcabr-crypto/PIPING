@@ -50,6 +50,15 @@ export default function Sidebar({ currentPage, onNavigate }) {
         className="fixed left-0 top-0 h-full w-3 z-50 hidden sm:block"
         onMouseEnter={() => setOpen(true)}
       />
+      {/* pestaña siempre visible en escritorio, para que se note que hay un menú */}
+      <button
+        onClick={() => setPinned((p) => !p)}
+        onMouseEnter={() => setOpen(true)}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-[#00589E] hover:bg-[#00406E] text-white rounded-r-md py-3 px-1 shadow-md hidden sm:flex flex-col items-center gap-1"
+        aria-label="Abrir menú"
+      >
+        <ChevronRight size={13} className={`transition-transform ${show ? "rotate-180" : ""}`} />
+      </button>
       {/* pestañita siempre visible, para tocar en mobile */}
       <button
         onClick={() => setPinned((p) => !p)}
