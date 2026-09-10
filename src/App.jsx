@@ -5,6 +5,7 @@ import Generador from "./pages/Generador";
 import SpecBuilder from "./pages/SpecBuilder";
 import ServiceCatalog from "./pages/ServiceCatalog";
 import CadworxExport from "./pages/CadworxExport";
+import Help from "./pages/Help";
 import ViewSpec from "./pages/ViewSpec";
 import PasswordGate from "./components/PasswordGate";
 import Sidebar from "./components/Sidebar";
@@ -17,6 +18,7 @@ const PAGE_TITLES = {
   "spec-builder": "Armar especificación",
   "service-catalog": "Catálogo de servicios",
   "cadworx-export": "Generar SPEC CADWorx",
+  "help": "Ayuda",
 };
 
 export default function App() {
@@ -83,6 +85,7 @@ export default function App() {
             {page === "spec-builder" && <SpecBuilder />}
             {page === "service-catalog" && <ServiceCatalog />}
             {page === "cadworx-export" && <CadworxExport />}
+            {page === "help" && <Help />}
           </>
         )}
       </main>
