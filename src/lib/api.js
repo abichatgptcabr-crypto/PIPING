@@ -570,3 +570,28 @@ export async function fetchStats() {
   ]);
   return { classCount: classCount || 0, specCount: specCount || 0, serviceCount: serviceCount || 0, plantCount: plantCount || 0 };
 }
+
+/* ═══════════════════════ Central de archivos CAD ════════════════════════ */
+export async function uploadCadFile(file, name, description) {
+  const uploadedBy = await getCurrentUserEmail();
+  const ext = (file.name.split(".").pop() || "dat").toLowerCase();
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error: upErr } = await supabase.storage.from("cad-files").upload(path, file, { upsert: false });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from("cad-files").getPublicUrl(path);
+  const { error } = await supabase.from("cad_files").insert({
+    name, description, file_url: data.publicUrl, file_name: file.name, uploaded_by: uploadedBy,
+  });
+  if (error) throw error;
+}
+
+export async function fetchCadFiles() {
+  const { data, error } = await supabase.from("cad_files").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCadFile(id) {
+  const { error } = await supabase.from("cad_files").delete().eq("id", id);
+  if (error) throw error;
+}
