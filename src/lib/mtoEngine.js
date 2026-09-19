@@ -1,0 +1,131 @@
+// Motor de consolidación de MTO (Material Take-Off) a partir del crudo
+// exportado de CADWorx. No inventa nada: clasifica por reglas verificadas
+// contra archivos reales de Hytech, y todo lo que no puede resolver con
+// certeza queda marcado explícitamente para que alguien lo complete a mano.
+import { lookupSap } from "../data/mtoDictionary.js";
+
+// ---------- 1. Clasificación por categoría ----------
+// Reglas verificadas contra 1046-RDA-P-LM-102 y 1029-SCH-P-LM-001 (reales).
+const RULES = [
+  { cat: "CAÑERIAS", test: (d) => /^PIPE,/i.test(d) },
+  { cat: "BRIDAS", test: (d) => /\bFLG\b/i.test(d) },
+  { cat: "JUNTAS", test: (d) => /GASKET/i.test(d) || /RING\s*JOINT/i.test(d) },
+  { cat: "ESPARRAGOS", test: (d) => /STUD BOLT/i.test(d) },
+  { cat: "VALVULAS", test: (d) => /^V[ÁA]LVULA/i.test(d) || /\bVALVE\b/i.test(d) },
+  {
+    cat: "ACCESORIOS",
+    test: (d) =>
+      /\bELL\b/i.test(d) ||
+      /\bTEE\b/i.test(d) ||
+      /\bRED\s+(ECC|CON|EXC)?\b/i.test(d) ||
+      /WELDOLET/i.test(d) ||
+      /CASQUETE|CAP\b/i.test(d) ||
+      /COUPLING|UNION/i.test(d),
+  },
+];
+
+export function classify(description) {
+  const d = (description || "").trim();
+  for (const r of RULES) {
+    if (r.test(d)) return r.cat;
+  }
+  return "SIN_CLASIFICAR";
+}
+
+// ---------- 2. Parseo de una fila cruda de CADWorx ----------
+// Formato esperado (verificado): MARK, SIZE, DESCRIPTION, LENGTH, QUANTITY, WEIGHT, CODIGO_SAP
+export function parseCrudoRow(row, area = null) {
+  const [mark, size, description, length, quantity, weight, codigoSap] = row;
+  const sap = codigoSap && String(codigoSap).trim() !== "-" ? String(codigoSap).trim() : null;
+  const lenNum = typeof length === "number" ? length : parseFloat(length);
+  return {
+    mark,
+    size: size ?? "",
+    description: (description ?? "").trim(),
+    lengthMm: Number.isFinite(lenNum) ? lenNum : null, // '-' u otros -> null (no es caño)
+    quantity: Number(quantity) || 0,
+    weight: Number(weight) || 0,
+    sap,
+    area,
+    categoria: classify(description),
+  };
+}
+
+// ---------- 3. Consolidación ----------
+// Llave de agrupación: código SAP cuando existe (es el dato confiable);
+// si no hay código SAP, se agrupa por descripción+medida tal cual viene
+// (y queda marcado sinCodigo: true para que se revise a mano).
+function groupKey(row) {
+  if (row.sap) return `sap:${row.sap}`;
+  return `desc:${row.categoria}:${row.description}::${row.size}`;
+}
+
+export function consolidate(rows, { roundPipeTo12 = false, byArea = false } = {}) {
+  const groups = new Map();
+
+  for (const row of rows) {
+    const key = byArea ? `${row.area || "—"}::${groupKey(row)}` : groupKey(row);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        sap: row.sap,
+        categoria: row.categoria,
+        description: row.description,
+        size: row.size,
+        area: byArea ? row.area : null,
+        sinCodigo: !row.sap,
+        totalQuantity: 0,
+        totalLengthMm: 0,
+        totalWeight: 0,
+        esCano: row.categoria === "CAÑERIAS",
+      });
+    }
+    const g = groups.get(key);
+    g.totalQuantity += row.quantity || 0;
+    g.totalWeight += row.weight || 0;
+    if (row.lengthMm) g.totalLengthMm += row.lengthMm;
+  }
+
+  const out = [];
+  for (const g of groups.values()) {
+    let cantidad = g.totalQuantity;
+    let unidad = "Un.";
+    if (g.esCano) {
+      let metros = g.totalLengthMm / 1000;
+      if (roundPipeTo12 && metros % 12 !== 0) {
+        metros = Math.ceil(metros / 12) * 12;
+      }
+      cantidad = metros;
+      unidad = "m";
+    }
+    const dicHit = g.sap ? lookupSap(g.sap) : null;
+    out.push({
+      sap: g.sap || "",
+      categoria: g.categoria,
+      area: g.area,
+      descripcionOriginal: g.description,
+      descripcionEspanol: dicHit ? dicHit.nombre : null, // null = sin traducir, se muestra el original
+      size: g.size,
+      unidad,
+      cantidad,
+      peso: Math.round(g.totalWeight * 100) / 100,
+      sinCodigo: g.sinCodigo,
+      sinTraducir: g.categoria !== "VALVULAS" && !dicHit,
+    });
+  }
+  // orden estable: por categoría, luego por diámetro descendente cuando es numérico, si no alfabético
+  return out.sort((a, b) => a.categoria.localeCompare(b.categoria) || a.size.localeCompare(b.size));
+}
+
+// ---------- 4. Comparación contra revisión anterior ----------
+export function withDiff(actual, anterior) {
+  const prevByKey = new Map();
+  for (const r of anterior) {
+    const k = r.sap ? `sap:${r.sap}` : `desc:${r.categoria}:${r.descripcionOriginal}::${r.size}`;
+    prevByKey.set(k, r.cantidad);
+  }
+  return actual.map((r) => {
+    const k = r.sap ? `sap:${r.sap}` : `desc:${r.categoria}:${r.descripcionOriginal}::${r.size}`;
+    const prev = prevByKey.has(k) ? prevByKey.get(k) : 0;
+    return { ...r, cantidadAnterior: prev, diferencia: Math.round((r.cantidad - prev) * 100) / 100 };
+  });
+}
