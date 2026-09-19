@@ -6,6 +6,7 @@ import SpecBuilder from "./pages/SpecBuilder";
 import ServiceCatalog from "./pages/ServiceCatalog";
 import CadworxExport from "./pages/CadworxExport";
 import CadFiles from "./pages/CadFiles";
+import MtoBuilder from "./pages/MtoBuilder";
 import Help from "./pages/Help";
 import ViewSpec from "./pages/ViewSpec";
 import PasswordGate from "./components/PasswordGate";
@@ -20,6 +21,7 @@ const PAGE_TITLES = {
   "service-catalog": "Catálogo de servicios",
   "cadworx-export": "Generar SPEC CADWorx",
   "cad-files": "Central de archivos CAD",
+  "mto-builder": "Generar MTO",
   "help": "Ayuda",
 };
 
@@ -88,6 +90,7 @@ export default function App() {
             {page === "service-catalog" && <ServiceCatalog />}
             {page === "cadworx-export" && <CadworxExport />}
             {page === "cad-files" && <CadFiles />}
+            {page === "mto-builder" && <MtoBuilder />}
             {page === "help" && <Help />}
           </>
         )}
