@@ -48,7 +48,7 @@ function readWorkbookRows(file) {
         // tiene las mismas columnas ni en el mismo orden — se identifican por
         // nombre, nunca por posición fija)
         const startIdx = json.findIndex((r) =>
-          r.some((c) => /mark|description|codigo_sap/i.test(String(c)))
+          r.some((c) => /mark|item|description|descripcion|codigo.?sap|solapa/i.test(String(c)))
         );
         const header = startIdx >= 0 ? json[startIdx] : json[0];
         const dataRows = startIdx >= 0 ? json.slice(startIdx + 1) : json.slice(1);
