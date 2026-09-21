@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useRef } from "react";
 import * as XLSX from "xlsx";
 import {
-  Upload, Trash2, Download, Plus, RefreshCw, AlertTriangle, Languages, LayoutGrid, Ruler, X,
+  Upload, Trash2, Download, Plus, RefreshCw, AlertTriangle, Languages, LayoutGrid, Ruler, X, Filter, ClipboardList,
 } from "lucide-react";
-import { parseCrudoRow, consolidate, withDiff } from "../lib/mtoEngine";
+import { parseCrudoRow, consolidate, withDiff, summarize } from "../lib/mtoEngine";
 
 // Aviso propio de esta página (no depende de la forma exacta del Toast
 // compartido, que no estaba disponible para verificar al construir esto).
@@ -92,7 +92,11 @@ export default function MtoBuilder() {
   const [docInfo, setDocInfo] = useState({ documento: "", proyecto: "", cliente: "", revision: "0" });
   const [result, setResult] = useState(null); // consolidado calculado
   const [edits, setEdits] = useState({}); // overrides manuales por índice
-  const [activeTab, setActiveTab] = useState("CAÑERIAS");
+  const [activeTab, setActiveTab] = useState("RESUMEN");
+  const [bulkFilter, setBulkFilter] = useState("");
+  const [bulkExcluded, setBulkExcluded] = useState({}); // { [cat]: Set(idx) }
+  const [bulkSap, setBulkSap] = useState("");
+  const [bulkDesc, setBulkDesc] = useState("");
   const fileInputRef = useRef(null);
   const prevInputRef = useRef(null);
 
@@ -153,9 +157,56 @@ export default function MtoBuilder() {
     return g;
   }, [result]);
 
+  const resumen = useMemo(() => (result ? summarize(result) : null), [result]);
+
   function displayDesc(row) {
     if (lang === "en") return row.descripcionOriginal;
     return row.descripcionEspanol || row.descripcionOriginal; // sin traducción -> fallback inglés, marcado
+  }
+
+  // ---------- Edición en bloque ----------
+  // Filtra las filas de la categoría activa por texto (descripción o código SAP),
+  // muestra cuáles matchean y deja sacar del lote las que no correspondan antes
+  // de aplicar el mismo código SAP y/o descripción a todo el resto de una.
+  const bulkMatches = useMemo(() => {
+    if (!result || !bulkFilter.trim()) return [];
+    const needle = bulkFilter.trim().toLowerCase();
+    const rows = grouped[activeTab] || [];
+    return rows
+      .map((r, idx) => ({ r, idx }))
+      .filter(({ r }) => (displayDesc(r) + " " + (r.sap || "")).toLowerCase().includes(needle));
+  }, [result, bulkFilter, activeTab, grouped, lang]);
+
+  const excludedSet = bulkExcluded[activeTab] || new Set();
+
+  function toggleExcluded(idx) {
+    setBulkExcluded((prev) => {
+      const set = new Set(prev[activeTab] || []);
+      if (set.has(idx)) set.delete(idx); else set.add(idx);
+      return { ...prev, [activeTab]: set };
+    });
+  }
+
+  function aplicarEnBloque() {
+    const objetivo = bulkMatches.filter(({ idx }) => !excludedSet.has(idx));
+    if (objetivo.length === 0) {
+      showToast("No hay filas seleccionadas para aplicar.", "error");
+      return;
+    }
+    setEdits((prev) => {
+      const catEdits = { ...(prev[activeTab] || {}) };
+      for (const { idx } of objetivo) {
+        catEdits[idx] = {
+          ...(catEdits[idx] || {}),
+          ...(bulkSap.trim() ? { sap: bulkSap.trim() } : {}),
+          ...(bulkDesc.trim() ? { descripcion: bulkDesc.trim() } : {}),
+        };
+      }
+      return { ...prev, [activeTab]: catEdits };
+    });
+    showToast(`Aplicado a ${objetivo.length} fila(s).`, "success");
+    setBulkFilter(""); setBulkSap(""); setBulkDesc("");
+    setBulkExcluded((prev) => ({ ...prev, [activeTab]: new Set() }));
   }
 
   function exportarExcel() {
@@ -171,6 +222,20 @@ export default function MtoBuilder() {
       ["GENERADO CON", "Hytech Tools — Generador de MTO"],
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(caratula), "Carátula");
+
+    // Hoja de Resumen — con esto se sale a comprar: metros totales de caño
+    // por diámetro, y cantidad total de unidades por diámetro en cada categoría.
+    if (resumen) {
+      const aoaResumen = [["CATEGORÍA", "MEDIDA", "CANTIDAD", "UNIDAD"]];
+      for (const cat of CATEGORIES) {
+        const r = resumen[cat];
+        if (!r || r.lineas.length === 0) continue;
+        r.lineas.forEach((l) => aoaResumen.push([CAT_LABELS[cat], l.size, l.cantidad, l.unidad]));
+        aoaResumen.push(["", `TOTAL ${CAT_LABELS[cat].toUpperCase()}`, r.total, r.unidad]);
+        aoaResumen.push(["", "", "", ""]);
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoaResumen), "Resumen");
+    }
 
     for (const cat of CATEGORIES) {
       const rows = grouped[cat] || [];
@@ -323,6 +388,14 @@ export default function MtoBuilder() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex gap-1 flex-wrap">
+              <button
+                onClick={() => setActiveTab("RESUMEN")}
+                className={`text-[12px] px-3 py-1.5 rounded-md flex items-center gap-1 font-medium ${
+                  activeTab === "RESUMEN" ? "bg-[#113044] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <ClipboardList size={12} /> Resumen de compra
+              </button>
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
@@ -344,12 +417,96 @@ export default function MtoBuilder() {
             </button>
           </div>
 
+          {activeTab === "RESUMEN" ? (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {CATEGORIES.map((cat) => {
+                const r = resumen?.[cat];
+                if (!r || r.lineas.length === 0) return null;
+                return (
+                  <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="bg-[#00589E] text-white text-[12.5px] font-medium px-3 py-2 flex justify-between">
+                      <span>{CAT_LABELS[cat]}</span>
+                      <span>{r.total} {r.unidad}</span>
+                    </div>
+                    <table className="w-full text-[12px]">
+                      <tbody>
+                        {r.lineas.map((l) => (
+                          <tr key={l.size} className="border-t border-slate-100">
+                            <td className="px-3 py-1.5 text-slate-600">{l.size}</td>
+                            <td className="px-3 py-1.5 text-right font-medium">{l.cantidad} {l.unidad}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+              <p className="sm:col-span-2 text-[11.5px] text-slate-400">
+                Esta vista suma todas las medidas de cada categoría — es la que sirve para salir a comprar.
+                El detalle ítem por ítem está en las otras pestañas.
+              </p>
+            </div>
+          ) : (
+          <>
           {NEEDS_REVIEW[activeTab] && (
             <p className="text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-2 flex items-center gap-1.5">
               <AlertTriangle size={13} /> En esta categoría el código SAP y las medidas a veces no vienen
               bien del crudo — revisá y editá directamente en la tabla antes de exportar.
             </p>
           )}
+
+          {/* Edición en bloque: filtrás por texto, la herramienta te muestra qué matchea,
+              podés sacar del lote lo que no corresponda, y aplicás código/descripción a todo el resto */}
+          <div className="bg-slate-50 border border-slate-200 rounded-md p-3 mb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter size={13} className="text-slate-400" />
+              <input
+                value={bulkFilter}
+                onChange={(e) => setBulkFilter(e.target.value)}
+                placeholder='Filtrar grupo (ej: 7/8" o STUD BOLT)'
+                className="text-[12px] border border-slate-300 rounded px-2 py-1 w-56"
+              />
+              {bulkFilter.trim() && (
+                <span className="text-[11.5px] text-slate-500">{bulkMatches.length} fila(s) encontradas</span>
+              )}
+            </div>
+            {bulkFilter.trim() && bulkMatches.length > 0 && (
+              <>
+                <div className="mt-2 max-h-32 overflow-y-auto border border-slate-200 rounded bg-white divide-y divide-slate-100">
+                  {bulkMatches.map(({ r, idx }) => (
+                    <label key={idx} className="flex items-center gap-2 px-2 py-1 text-[11.5px] cursor-pointer hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={!excludedSet.has(idx)}
+                        onChange={() => toggleExcluded(idx)}
+                      />
+                      <span className={excludedSet.has(idx) ? "line-through text-slate-400" : ""}>
+                        {r.sap || "—"} · {displayDesc(r)} · {r.size}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap mt-2">
+                  <input
+                    value={bulkSap} onChange={(e) => setBulkSap(e.target.value)}
+                    placeholder="Nuevo código SAP (opcional)"
+                    className="text-[12px] border border-slate-300 rounded px-2 py-1 w-44"
+                  />
+                  <input
+                    value={bulkDesc} onChange={(e) => setBulkDesc(e.target.value)}
+                    placeholder="Nueva descripción (opcional)"
+                    className="text-[12px] border border-slate-300 rounded px-2 py-1 w-64"
+                  />
+                  <button
+                    onClick={aplicarEnBloque}
+                    className="text-[12px] bg-[#00589E] text-white px-3 py-1.5 rounded-md hover:bg-[#00406E]"
+                  >
+                    Aplicar a {bulkMatches.length - excludedSet.size} fila(s)
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="overflow-x-auto border border-slate-200 rounded-lg">
             <table className="w-full text-[12px]">
@@ -425,6 +582,8 @@ export default function MtoBuilder() {
               </tbody>
             </table>
           </div>
+          </>
+          )}
         </div>
       )}
     </div>
