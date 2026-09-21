@@ -44,12 +44,41 @@ export function classify(description) {
 // nunca por posición fija.
 const VALID_CATS = ["CAÑERIAS", "ACCESORIOS", "BRIDAS", "JUNTAS", "ESPARRAGOS", "VALVULAS"];
 
+// El crudo aparece con nombres de columna en inglés o en español según cómo
+// esté configurado el reporte — verificado con 4 exportaciones reales
+// distintas. Se reconoce por cualquiera de estos alias, sin importar
+// mayúsculas ni tildes.
+const FIELD_ALIASES = {
+  MARK: ["MARK", "ITEM"],
+  SIZE: ["SIZE", "DIAMETRO"],
+  DESCRIPTION: ["DESCRIPTION", "DESCRIPCION"],
+  LENGTH: ["LENGTH", "LONGITUD"],
+  QUANTITY: ["QUANTITY", "CANTIDAD"],
+  WEIGHT: ["WEIGHT", "PESO"],
+  CODIGO_SAP: ["CODIGO_SAP", "CODIGO SAP", "SAP"],
+  AREA: ["AREA"],
+  SOLAPA: ["SOLAPA", "CATEGORIA"],
+};
+
+function stripAccents(s) {
+  return String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
 export function buildHeaderMap(headerRow) {
-  const map = {};
+  const rawByNormalized = {};
   (headerRow || []).forEach((h, i) => {
-    const key = String(h ?? "").trim().toUpperCase();
-    if (key) map[key] = i;
+    const key = stripAccents(h).trim().toUpperCase();
+    if (key && !(key in rawByNormalized)) rawByNormalized[key] = i;
   });
+  const map = {};
+  for (const [canonical, aliases] of Object.entries(FIELD_ALIASES)) {
+    for (const alias of aliases) {
+      if (alias in rawByNormalized) {
+        map[canonical] = rawByNormalized[alias];
+        break;
+      }
+    }
+  }
   return map;
 }
 
