@@ -2,8 +2,24 @@ import React, { useState, useMemo, useRef } from "react";
 import * as XLSX from "xlsx";
 import {
   Upload, Trash2, Download, Plus, RefreshCw, AlertTriangle, Languages, LayoutGrid, Ruler, X, Filter, ClipboardList,
+  CheckCircle2, Info,
 } from "lucide-react";
-import { buildHeaderMap, parseCrudoRow, consolidate, withDiff, summarize } from "../lib/mtoEngine";
+import { buildHeaderMap, parseCrudoRow, consolidate, withDiff, summarize, detectColumns, FIELD_ALIASES } from "../lib/mtoEngine";
+
+// Etiquetas legibles para la leyenda de columnas reconocidas, en el mismo
+// orden que se muestran en pantalla. Se arma a partir de FIELD_ALIASES del
+// motor para que la leyenda nunca se desincronice de lo que realmente lee.
+const FIELD_LABELS = {
+  MARK: { label: "Ítem", req: false },
+  SIZE: { label: "Medida / diámetro", req: false },
+  DESCRIPTION: { label: "Descripción", req: true },
+  LENGTH: { label: "Longitud (para caños)", req: false },
+  QUANTITY: { label: "Cantidad", req: true },
+  WEIGHT: { label: "Peso", req: false },
+  CODIGO_SAP: { label: "Código SAP", req: false },
+  AREA: { label: "Área", req: false },
+  SOLAPA: { label: "Categoría (solapa de CADWorx)", req: false },
+};
 
 // Aviso propio de esta página (no depende de la forma exacta del Toast
 // compartido, que no estaba disponible para verificar al construir esto).
@@ -63,19 +79,66 @@ function readWorkbookRows(file) {
 }
 
 function FileRow({ f, onRemoveArea, onAreaChange, onRemove }) {
+  const ok = f.colInfo?.ok;
   return (
-    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
-      <span className="text-[12.5px] text-slate-700 flex-1 truncate">{f.name}</span>
-      <input
-        value={f.area}
-        onChange={(e) => onAreaChange(e.target.value)}
-        placeholder="Área (opcional)"
-        className="w-40 text-[12px] border border-slate-300 rounded px-2 py-1"
-      />
-      <span className="text-[11px] text-slate-400">{f.rows.length} filas</span>
-      <button onClick={onRemove} className="text-slate-400 hover:text-red-500">
-        <Trash2 size={14} />
-      </button>
+    <div className={`rounded-md px-3 py-2 border ${ok ? "bg-slate-50 border-slate-200" : "bg-red-50 border-red-200"}`}>
+      <div className="flex items-center gap-2">
+        {ok ? <CheckCircle2 size={14} className="text-emerald-500 shrink-0" /> : <AlertTriangle size={14} className="text-red-500 shrink-0" />}
+        <span className="text-[12.5px] text-slate-700 flex-1 truncate">{f.name}</span>
+        <input
+          value={f.area}
+          onChange={(e) => onAreaChange(e.target.value)}
+          placeholder="Área (opcional)"
+          className="w-40 text-[12px] border border-slate-300 rounded px-2 py-1"
+        />
+        <span className="text-[11px] text-slate-400">{f.rows.length} filas</span>
+        <button onClick={onRemove} className="text-slate-400 hover:text-red-500">
+          <Trash2 size={14} />
+        </button>
+      </div>
+      {!ok && (
+        <p className="text-[11.5px] text-red-700 mt-1.5 pl-6">
+          No se puede procesar: no tiene columna de <b>{f.colInfo.missingRequired.join(" ni de ")}</b> — es un
+          formato distinto al modelo general que reconoce la herramienta. Columnas detectadas: {f.colInfo.found.join(", ") || "ninguna reconocida"}.
+        </p>
+      )}
+      {ok && f.colInfo.missingRecommended.length > 0 && (
+        <p className="text-[11px] text-amber-600 mt-1.5 pl-6">
+          Sin columna de {f.colInfo.missingRecommended.map((k) => FIELD_LABELS[k]?.label || k).join(" / ")} — se
+          procesa igual, agrupando por descripción en vez de por código.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ColumnLegend() {
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 mb-4">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Info size={13} className="text-slate-400" />
+        <h2 className="text-[12.5px] font-semibold text-slate-700">Columnas que reconoce esta herramienta</h2>
+      </div>
+      <p className="text-[11.5px] text-slate-500 mb-2">
+        Lee el crudo por el NOMBRE de columna (en inglés o en español, con o sin tilde), no por su posición ni orden.
+        No hace falta que el archivo tenga todas — <b>Descripción</b> y <b>Cantidad</b> son las únicas obligatorias;
+        el resto es opcional y, si falta, se avisa y se sigue procesando con lo que sí está (por ejemplo, proyectos
+        que no usan código SAP se agrupan por descripción + medida en vez de por código).
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {Object.entries(FIELD_ALIASES).map(([field, aliases]) => (
+          <span
+            key={field}
+            className={`text-[11px] px-2 py-1 rounded border ${
+              FIELD_LABELS[field]?.req ? "bg-white border-slate-300 text-slate-700 font-medium" : "bg-white border-slate-200 text-slate-500"
+            }`}
+          >
+            {FIELD_LABELS[field]?.label || field} <span className="text-slate-400">({aliases.join(" / ")})</span>
+            {FIELD_LABELS[field]?.req && <span className="text-red-500"> *</span>}
+          </span>
+        ))}
+      </div>
+      <p className="text-[10.5px] text-slate-400 mt-1.5">* obligatoria — sin esta columna el archivo no se puede procesar.</p>
     </div>
   );
 }
@@ -108,7 +171,7 @@ export default function MtoBuilder() {
     const parsed = await Promise.all(
       arr.map(async (file) => {
         const { header, rows } = await readWorkbookRows(file);
-        return { name: file.name, area: "", header, rows };
+        return { name: file.name, area: "", header, rows, colInfo: detectColumns(header) };
       })
     );
     setter((prev) => [...prev, ...parsed]);
@@ -133,6 +196,16 @@ export default function MtoBuilder() {
   function generar() {
     if (files.length === 0) {
       showToast("Subí al menos un archivo crudo de CADWorx.", "error");
+      return;
+    }
+    const rotos = files.filter((f) => f.colInfo && !f.colInfo.ok);
+    if (rotos.length > 0) {
+      showToast(
+        `No se puede generar: ${rotos.map((f) => f.name).join(", ")} no tiene columnas de ` +
+          `${[...new Set(rotos.flatMap((f) => f.colInfo.missingRequired))].join(" / ")} — es un formato distinto ` +
+          `al modelo general. Sacá ese archivo o avisame para agregar soporte a ese formato.`,
+        "error"
+      );
       return;
     }
     const allRows = parseFileSet(files);
@@ -173,7 +246,7 @@ export default function MtoBuilder() {
     return g;
   }, [result]);
 
-  const resumen = useMemo(() => (result ? summarize(result) : null), [result]);
+  const resumen = useMemo(() => (result ? summarize(result, lang) : null), [result, lang]);
 
   function displayDesc(row) {
     if (lang === "en") return row.descripcionOriginal;
@@ -242,13 +315,13 @@ export default function MtoBuilder() {
     // Hoja de Resumen — con esto se sale a comprar: metros totales de caño
     // por diámetro, y cantidad total de unidades por diámetro en cada categoría.
     if (resumen) {
-      const aoaResumen = [["CATEGORÍA", "MEDIDA", "CANTIDAD", "UNIDAD"]];
+      const aoaResumen = [["CATEGORÍA", "DESCRIPCIÓN", "MEDIDA", "CANTIDAD", "UNIDAD"]];
       for (const cat of CATEGORIES) {
         const r = resumen[cat];
         if (!r || r.lineas.length === 0) continue;
-        r.lineas.forEach((l) => aoaResumen.push([CAT_LABELS[cat], l.size, l.cantidad, l.unidad]));
-        aoaResumen.push(["", `TOTAL ${CAT_LABELS[cat].toUpperCase()}`, r.total, r.unidad]);
-        aoaResumen.push(["", "", "", ""]);
+        r.lineas.forEach((l) => aoaResumen.push([CAT_LABELS[cat], l.descripcion || "", l.size, l.cantidad, l.unidad]));
+        aoaResumen.push(["", "", `TOTAL ${CAT_LABELS[cat].toUpperCase()}`, r.total, r.unidad]);
+        aoaResumen.push(["", "", "", "", ""]);
       }
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoaResumen), "Resumen");
     }
@@ -290,6 +363,8 @@ export default function MtoBuilder() {
         traducido a la nomenclatura de Hytech cuando el código SAP ya está verificado. Lo que no se puede
         resolver con certeza queda marcado para que lo revises, nunca se inventa.
       </p>
+
+      <ColumnLegend />
 
       {/* Datos del documento */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
@@ -446,10 +521,13 @@ export default function MtoBuilder() {
                     </div>
                     <table className="w-full text-[12px]">
                       <tbody>
-                        {r.lineas.map((l) => (
-                          <tr key={l.size} className="border-t border-slate-100">
+                        {r.lineas.map((l, i) => (
+                          <tr key={`${l.descripcion || ""}-${l.size}-${i}`} className="border-t border-slate-100">
+                            {l.descripcion != null && (
+                              <td className="px-3 py-1.5 text-slate-600 truncate max-w-[220px]" title={l.descripcion}>{l.descripcion}</td>
+                            )}
                             <td className="px-3 py-1.5 text-slate-600">{l.size}</td>
-                            <td className="px-3 py-1.5 text-right font-medium">{l.cantidad} {l.unidad}</td>
+                            <td className="px-3 py-1.5 text-right font-medium whitespace-nowrap">{l.cantidad} {l.unidad}</td>
                           </tr>
                         ))}
                       </tbody>
