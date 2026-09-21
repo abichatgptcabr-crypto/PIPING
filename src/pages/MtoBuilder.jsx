@@ -1,10 +1,57 @@
 import React, { useState, useMemo, useRef } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx"; // se usa solo para LEER el crudo de CADWorx
+import ExcelJS from "exceljs"; // se usa para ESCRIBIR el entregable con estilo (xlsx no permite colores/bordes)
 import {
   Upload, Trash2, Download, Plus, RefreshCw, AlertTriangle, Languages, LayoutGrid, Ruler, X, Filter, ClipboardList,
   CheckCircle2, Info,
 } from "lucide-react";
 import { buildHeaderMap, parseCrudoRow, consolidate, withDiff, summarize, detectColumns, FIELD_ALIASES } from "../lib/mtoEngine";
+
+// Paleta del entregable — mismos colores que ya usa Hytech Tools en la
+// interfaz, para que el Excel se vea de la misma familia visual.
+const NAVY = "FF113044";
+const BLUE = "FF00589E";
+const LIGHT_BAND = "FFEFF4F8";
+const WARN_BAND = "FFFEF3C7";
+const BORDER_COLOR = "FFB9C4CC";
+const THIN_BORDER = {
+  top: { style: "thin", color: { argb: BORDER_COLOR } },
+  left: { style: "thin", color: { argb: BORDER_COLOR } },
+  bottom: { style: "thin", color: { argb: BORDER_COLOR } },
+  right: { style: "thin", color: { argb: BORDER_COLOR } },
+};
+
+function styleHeaderRow(row) {
+  row.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    cell.border = THIN_BORDER;
+  });
+  row.height = 22;
+}
+
+function styleDataRow(row, flagged) {
+  row.eachCell((cell) => {
+    cell.border = THIN_BORDER;
+    cell.alignment = { vertical: "middle", wrapText: true };
+    if (flagged) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: WARN_BAND } };
+  });
+}
+
+function downloadWorkbook(wb, filename) {
+  return wb.xlsx.writeBuffer().then((buf) => {
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
 
 // Etiquetas legibles para la leyenda de columnas reconocidas, en el mismo
 // orden que se muestran en pantalla. Se arma a partir de FIELD_ALIASES del
@@ -298,60 +345,154 @@ export default function MtoBuilder() {
     setBulkExcluded((prev) => ({ ...prev, [activeTab]: new Set() }));
   }
 
-  function exportarExcel() {
+  async function exportarExcel() {
     if (!result) return;
-    const wb = XLSX.utils.book_new();
+    try {
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "Hytech Tools";
+      wb.created = new Date();
 
-    // Carátula simple
-    const caratula = [
-      ["DOCUMENTO N°", docInfo.documento],
-      ["PROYECTO", docInfo.proyecto],
-      ["CLIENTE", docInfo.cliente],
-      ["REVISIÓN", docInfo.revision],
-      ["GENERADO CON", "Hytech Tools — Generador de MTO"],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(caratula), "Carátula");
+      // ---------- Carátula ----------
+      // Cuadro de título + datos del documento + historial de revisiones,
+      // con el mismo esquema de colores que el resto de la herramienta
+      // (siguiendo el estilo de carátula real de Hytech que vimos en
+      // 1029-SCH-P-LM-001.xlsm: banda de título, cuadro de datos con
+      // bordes, tabla de revisiones abajo).
+      const car = wb.addWorksheet("Carátula");
+      car.columns = [{ width: 20 }, { width: 42 }, { width: 16 }, { width: 20 }, { width: 20 }];
+      car.mergeCells("A1:E2");
+      const title = car.getCell("A1");
+      title.value = "GENERADOR DE MTO — HYTECH TOOLS";
+      title.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+      title.alignment = { vertical: "middle", horizontal: "center" };
+      for (let rr = 1; rr <= 2; rr++)
+        for (let cc = 1; cc <= 5; cc++)
+          car.getRow(rr).getCell(cc).fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
 
-    // Hoja de Resumen — con esto se sale a comprar: metros totales de caño
-    // por diámetro, y cantidad total de unidades por diámetro en cada categoría.
-    if (resumen) {
-      const aoaResumen = [["CATEGORÍA", "DESCRIPCIÓN", "MEDIDA", "CANTIDAD", "UNIDAD"]];
-      for (const cat of CATEGORIES) {
-        const r = resumen[cat];
-        if (!r || r.lineas.length === 0) continue;
-        r.lineas.forEach((l) => aoaResumen.push([CAT_LABELS[cat], l.descripcion || "", l.size, l.cantidad, l.unidad]));
-        aoaResumen.push(["", "", `TOTAL ${CAT_LABELS[cat].toUpperCase()}`, r.total, r.unidad]);
-        aoaResumen.push(["", "", "", "", ""]);
-      }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoaResumen), "Resumen");
-    }
-
-    for (const cat of CATEGORIES) {
-      const rows = grouped[cat] || [];
-      if (rows.length === 0) continue;
-      const header = compareRev
-        ? ["ITEM", "CODIGO SAP", "DESCRIPCIÓN", "DIAMETRO", "UNIDAD", "CANT. ANTERIOR", "CANT. ACTUAL", "DIF.", "SURPLUS", "OBSERVACIONES"]
-        : ["ITEM", "CODIGO SAP", "DESCRIPCIÓN", "DIAMETRO", "UNIDAD", "CANTIDAD", "SURPLUS", "OBSERVACIONES"];
-      const aoa = [header];
-      rows.forEach((r, i) => {
-        const ed = (edits[cat] || {})[i] || {};
-        const desc = ed.descripcion ?? displayDesc(r);
-        const sap = ed.sap ?? r.sap;
-        const size = ed.size ?? r.size;
-        const surplus = ed.surplus ?? "";
-        const obs = ed.obs ?? (r.sinCodigo ? "Sin código SAP en crudo — revisar" : r.sinTraducir ? "Sin traducción verificada — revisar" : "");
-        if (compareRev) {
-          aoa.push([i + 1, sap, desc, size, r.unidad, r.cantidadAnterior ?? 0, r.cantidad, r.diferencia ?? 0, surplus, obs]);
-        } else {
-          aoa.push([i + 1, sap, desc, size, r.unidad, r.cantidad, surplus, obs]);
-        }
+      let r = 4;
+      [
+        ["DOCUMENTO N°", docInfo.documento || "—"],
+        ["PROYECTO", docInfo.proyecto || "—"],
+        ["CLIENTE", docInfo.cliente || "—"],
+        ["REVISIÓN", docInfo.revision || "0"],
+        ["FECHA", new Date().toLocaleDateString("es-AR")],
+      ].forEach(([label, value]) => {
+        const lc = car.getCell(`A${r}`);
+        lc.value = label;
+        lc.font = { bold: true, color: { argb: NAVY } };
+        lc.border = THIN_BORDER;
+        lc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_BAND } };
+        car.mergeCells(`B${r}:E${r}`);
+        const vc = car.getCell(`B${r}`);
+        vc.value = value;
+        vc.border = THIN_BORDER;
+        r += 1;
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), CAT_LABELS[cat].slice(0, 31));
-    }
 
-    const fname = (docInfo.documento || "MTO") + ".xlsx";
-    XLSX.writeFile(wb, fname);
-    showToast("Excel generado y descargado.", "success");
+      r += 1;
+      car.mergeCells(`A${r}:E${r}`);
+      const revTitle = car.getCell(`A${r}`);
+      revTitle.value = "HISTORIAL DE REVISIONES";
+      revTitle.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      revTitle.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+      revTitle.alignment = { horizontal: "center" };
+      r += 1;
+      const revHeaderRow = car.getRow(r);
+      ["REV.", "DESCRIPCIÓN", "FECHA", "", ""].forEach((h, i) => (revHeaderRow.getCell(i + 1).value = h));
+      styleHeaderRow(revHeaderRow);
+      r += 1;
+      const revDataRow = car.getRow(r);
+      revDataRow.getCell(1).value = docInfo.revision || "0";
+      revDataRow.getCell(2).value = "EMISIÓN";
+      revDataRow.getCell(3).value = new Date().toLocaleDateString("es-AR");
+      styleDataRow(revDataRow, false);
+      r += 2;
+      const footer = car.getCell(`A${r}`);
+      footer.value = "Generado con Hytech Tools — Generador de MTO. Lo marcado en amarillo en las hojas de detalle requiere revisión manual.";
+      footer.font = { italic: true, size: 9, color: { argb: "FF64748B" } };
+
+      // ---------- Resumen de compra ----------
+      if (resumen) {
+        const rs = wb.addWorksheet("Resumen");
+        rs.columns = [
+          { header: "CATEGORÍA", key: "cat", width: 16 },
+          { header: "DESCRIPCIÓN", key: "desc", width: 44 },
+          { header: "MEDIDA", key: "size", width: 12 },
+          { header: "CANTIDAD", key: "cant", width: 12 },
+          { header: "UNIDAD", key: "un", width: 10 },
+        ];
+        styleHeaderRow(rs.getRow(1));
+        rs.views = [{ state: "frozen", ySplit: 1 }];
+        for (const cat of CATEGORIES) {
+          const rdata = resumen[cat];
+          if (!rdata || rdata.lineas.length === 0) continue;
+          rdata.lineas.forEach((l) => {
+            const row = rs.addRow({ cat: CAT_LABELS[cat], desc: l.descripcion || "", size: l.size, cant: l.cantidad, un: l.unidad });
+            styleDataRow(row, false);
+          });
+          const totalRow = rs.addRow({ cat: "", desc: `TOTAL ${CAT_LABELS[cat].toUpperCase()}`, size: "", cant: rdata.total, un: rdata.unidad });
+          totalRow.eachCell((c) => {
+            c.font = { bold: true };
+            c.border = THIN_BORDER;
+            c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_BAND } };
+          });
+        }
+      }
+
+      // ---------- Hojas por categoría ----------
+      for (const cat of CATEGORIES) {
+        const rows = grouped[cat] || [];
+        if (rows.length === 0) continue;
+        const ws = wb.addWorksheet(CAT_LABELS[cat].slice(0, 31));
+        const cols = compareRev
+          ? [
+              { header: "ITEM", key: "item", width: 8 },
+              { header: "CODIGO SAP", key: "sap", width: 14 },
+              { header: "DESCRIPCIÓN", key: "desc", width: 46 },
+              { header: "DIAMETRO", key: "size", width: 12 },
+              { header: "UNIDAD", key: "un", width: 9 },
+              { header: "CANT. ANTERIOR", key: "prev", width: 14 },
+              { header: "CANT. ACTUAL", key: "cant", width: 13 },
+              { header: "DIF.", key: "dif", width: 9 },
+              { header: "SURPLUS", key: "surplus", width: 10 },
+              { header: "OBSERVACIONES", key: "obs", width: 34 },
+            ]
+          : [
+              { header: "ITEM", key: "item", width: 8 },
+              { header: "CODIGO SAP", key: "sap", width: 14 },
+              { header: "DESCRIPCIÓN", key: "desc", width: 46 },
+              { header: "DIAMETRO", key: "size", width: 12 },
+              { header: "UNIDAD", key: "un", width: 9 },
+              { header: "CANTIDAD", key: "cant", width: 12 },
+              { header: "SURPLUS", key: "surplus", width: 10 },
+              { header: "OBSERVACIONES", key: "obs", width: 34 },
+            ];
+        ws.columns = cols;
+        styleHeaderRow(ws.getRow(1));
+        ws.views = [{ state: "frozen", ySplit: 1 }];
+        rows.forEach((row0, i) => {
+          const ed = (edits[cat] || {})[i] || {};
+          const desc = ed.descripcion ?? displayDesc(row0);
+          const sap = ed.sap ?? row0.sap;
+          const size = ed.size ?? row0.size;
+          const surplus = ed.surplus ?? "";
+          const flagged = row0.sinCodigo || row0.sinTraducir;
+          const obs = ed.obs ?? (row0.sinCodigo ? "Sin código SAP en crudo — revisar" : row0.sinTraducir ? "Sin traducción verificada — revisar" : "");
+          const rowData = compareRev
+            ? { item: i + 1, sap, desc, size, un: row0.unidad, prev: row0.cantidadAnterior ?? 0, cant: row0.cantidad, dif: row0.diferencia ?? 0, surplus, obs }
+            : { item: i + 1, sap, desc, size, un: row0.unidad, cant: row0.cantidad, surplus, obs };
+          const row = ws.addRow(rowData);
+          styleDataRow(row, flagged);
+        });
+        ws.autoFilter = { from: "A1", to: `${String.fromCharCode(64 + cols.length)}1` };
+      }
+
+      const fname = (docInfo.documento || "MTO") + ".xlsx";
+      await downloadWorkbook(wb, fname);
+      showToast("Excel generado y descargado.", "success");
+    } catch (err) {
+      showToast("No se pudo generar el Excel: " + err.message, "error");
+    }
   }
 
   return (
