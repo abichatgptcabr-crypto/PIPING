@@ -48,7 +48,7 @@ const VALID_CATS = ["CAÑERIAS", "ACCESORIOS", "BRIDAS", "JUNTAS", "ESPARRAGOS",
 // esté configurado el reporte — verificado con 4 exportaciones reales
 // distintas. Se reconoce por cualquiera de estos alias, sin importar
 // mayúsculas ni tildes.
-const FIELD_ALIASES = {
+export const FIELD_ALIASES = {
   MARK: ["MARK", "ITEM"],
   SIZE: ["SIZE", "DIAMETRO"],
   DESCRIPTION: ["DESCRIPTION", "DESCRIPCION"],
@@ -59,6 +59,25 @@ const FIELD_ALIASES = {
   AREA: ["AREA"],
   SOLAPA: ["SOLAPA", "CATEGORIA"],
 };
+
+// Campos sin los que no se puede armar nada (sin descripción y cantidad no
+// hay MTO posible). El resto es útil pero opcional — si falta CODIGO_SAP,
+// por ejemplo, se sigue procesando agrupando por descripción+medida en vez
+// de por código (ver groupKey más abajo), no se bloquea el archivo.
+const REQUIRED_FIELDS = ["DESCRIPTION", "QUANTITY"];
+const RECOMMENDED_FIELDS = ["MARK", "SIZE"];
+
+// Detecta qué columnas reconocidas trae un archivo antes de procesarlo. No
+// todos los proyectos usan la misma estructura (hay proyectos sin código
+// SAP, por ejemplo) — esto separa lo que falta de verdad (bloquea) de lo
+// que es solo recomendable (se avisa pero se sigue con lo que hay).
+export function detectColumns(headerRow) {
+  const map = buildHeaderMap(headerRow);
+  const found = Object.keys(map);
+  const missingRequired = REQUIRED_FIELDS.filter((f) => !found.includes(f));
+  const missingRecommended = RECOMMENDED_FIELDS.filter((f) => !found.includes(f) && !missingRequired.includes(f));
+  return { map, found, missingRequired, missingRecommended, ok: missingRequired.length === 0 };
+}
 
 function stripAccents(s) {
   return String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -188,21 +207,27 @@ export function consolidate(rows, { roundPipeTo12 = false, byArea = false } = {}
 
 // ---------- 4. Resumen de compra (agrupado por categoría + medida) ----------
 // Esta es la vista con la que el cliente sale a comprar: metros totales de
-// caño por diámetro, y cantidad total de unidades por diámetro en cada una
-// de las otras categorías. No reemplaza el detalle, lo resume.
-export function summarize(consolidado) {
+// caño por diámetro (ahí sí alcanza con el diámetro, es todo caño), y en el
+// resto de las categorías, cantidad por TIPO de componente + medida — un
+// "4in" de accesorios no sirve para comprar si no dice si son codos, tees o
+// reducciones, así que ahí se agrupa por descripción también.
+export function summarize(consolidado, lang = "es") {
   const porCategoria = {};
   for (const cat of ["CAÑERIAS", "ACCESORIOS", "BRIDAS", "JUNTAS", "ESPARRAGOS", "VALVULAS"]) {
     const filas = consolidado.filter((r) => r.categoria === cat);
-    const porMedida = new Map();
+    const porGrupo = new Map();
     for (const f of filas) {
-      const key = f.size || "—";
-      porMedida.set(key, (porMedida.get(key) || 0) + (f.cantidad || 0));
+      const descripcion =
+        cat === "CAÑERIAS" ? null : lang === "en" ? f.descripcionOriginal : f.descripcionEspanol || f.descripcionOriginal;
+      const size = f.size || "—";
+      const key = cat === "CAÑERIAS" ? size : `${descripcion || "—"}::${size}`;
+      if (!porGrupo.has(key)) porGrupo.set(key, { descripcion, size, cantidad: 0 });
+      porGrupo.get(key).cantidad += f.cantidad || 0;
     }
     const unidad = cat === "CAÑERIAS" ? "m" : "Un.";
-    const lineas = [...porMedida.entries()]
-      .map(([size, cantidad]) => ({ size, cantidad: Math.round(cantidad * 100) / 100, unidad }))
-      .sort((a, b) => a.size.localeCompare(b.size));
+    const lineas = [...porGrupo.values()]
+      .map((l) => ({ ...l, cantidad: Math.round(l.cantidad * 100) / 100, unidad }))
+      .sort((a, b) => (a.descripcion || "").localeCompare(b.descripcion || "") || a.size.localeCompare(b.size));
     const total = Math.round(lineas.reduce((s, l) => s + l.cantidad, 0) * 100) / 100;
     porCategoria[cat] = { lineas, total, unidad };
   }
