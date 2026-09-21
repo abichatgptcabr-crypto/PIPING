@@ -20,7 +20,11 @@ const RULES = [
       /\bRED\s+(ECC|CON|EXC)?\b/i.test(d) ||
       /WELDOLET/i.test(d) ||
       /CASQUETE|CAP\b/i.test(d) ||
-      /COUPLING|UNION/i.test(d),
+      /COUPLING|UNION/i.test(d) ||
+      /SOCKOLET/i.test(d) ||
+      /\bNIPPLE\b/i.test(d) ||
+      /HEX HEAD PLUG|\bPLUG\b/i.test(d) ||
+      /WELD GAP/i.test(d),
   },
 ];
 
@@ -33,21 +37,58 @@ export function classify(description) {
 }
 
 // ---------- 2. Parseo de una fila cruda de CADWorx ----------
-// Formato esperado (verificado): MARK, SIZE, DESCRIPTION, LENGTH, QUANTITY, WEIGHT, CODIGO_SAP
-export function parseCrudoRow(row, area = null) {
-  const [mark, size, description, length, quantity, weight, codigoSap] = row;
-  const sap = codigoSap && String(codigoSap).trim() !== "-" ? String(codigoSap).trim() : null;
-  const lenNum = typeof length === "number" ? length : parseFloat(length);
+// El crudo de CADWorx NO siempre trae las mismas columnas ni en el mismo orden
+// (verificado con 3 exportaciones reales distintas: una de 7 columnas sin AREA
+// ni SOLAPA, una de 11 columnas con AREA+SOLAPA, y una de 10 sin ellas pero con
+// WEIGHT). Por eso se lee por NOMBRE de columna, tomado del encabezado real,
+// nunca por posición fija.
+const VALID_CATS = ["CAÑERIAS", "ACCESORIOS", "BRIDAS", "JUNTAS", "ESPARRAGOS", "VALVULAS"];
+
+export function buildHeaderMap(headerRow) {
+  const map = {};
+  (headerRow || []).forEach((h, i) => {
+    const key = String(h ?? "").trim().toUpperCase();
+    if (key) map[key] = i;
+  });
+  return map;
+}
+
+// SOLAPA es la categoría que el propio CADWorx ya asigna al exportar — cuando
+// viene, es más confiable que adivinar por palabras clave en la descripción.
+function normalizeCategoria(raw) {
+  if (raw == null) return null;
+  const v = String(raw).trim().toUpperCase().replace("CANERIAS", "CAÑERIAS");
+  return VALID_CATS.includes(v) ? v : null;
+}
+
+export function parseCrudoRow(headerMap, row, area = null) {
+  const get = (name) => {
+    const idx = headerMap[name];
+    return idx === undefined ? undefined : row[idx];
+  };
+  const description = String(get("DESCRIPTION") ?? "").trim();
+  const size = get("SIZE") ?? "";
+  const lengthRaw = get("LENGTH");
+  const lenNum = typeof lengthRaw === "number" ? lengthRaw : parseFloat(lengthRaw);
+  const sapRaw = get("CODIGO_SAP");
+  const sap = sapRaw != null && String(sapRaw).trim() !== "-" && String(sapRaw).trim() !== ""
+    ? String(sapRaw).trim() : null;
+  const areaCol = get("AREA");
+  const areaFinal = areaCol !== undefined && areaCol !== null && String(areaCol).trim() !== ""
+    ? String(areaCol).trim() : area;
+  const categoriaSolapa = normalizeCategoria(get("SOLAPA"));
+
   return {
-    mark,
-    size: size ?? "",
-    description: (description ?? "").trim(),
+    mark: get("MARK"),
+    size,
+    description,
     lengthMm: Number.isFinite(lenNum) ? lenNum : null, // '-' u otros -> null (no es caño)
-    quantity: Number(quantity) || 0,
-    weight: Number(weight) || 0,
+    quantity: Number(get("QUANTITY")) || 0,
+    weight: Number(get("WEIGHT")) || 0,
     sap,
-    area,
-    categoria: classify(description),
+    area: areaFinal,
+    categoria: categoriaSolapa || classify(description),
+    categoriaVerificada: !!categoriaSolapa, // vino de SOLAPA, no se adivinó por palabra clave
   };
 }
 
