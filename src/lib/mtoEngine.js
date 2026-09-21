@@ -116,7 +116,30 @@ export function consolidate(rows, { roundPipeTo12 = false, byArea = false } = {}
   return out.sort((a, b) => a.categoria.localeCompare(b.categoria) || a.size.localeCompare(b.size));
 }
 
-// ---------- 4. Comparación contra revisión anterior ----------
+// ---------- 4. Resumen de compra (agrupado por categoría + medida) ----------
+// Esta es la vista con la que el cliente sale a comprar: metros totales de
+// caño por diámetro, y cantidad total de unidades por diámetro en cada una
+// de las otras categorías. No reemplaza el detalle, lo resume.
+export function summarize(consolidado) {
+  const porCategoria = {};
+  for (const cat of ["CAÑERIAS", "ACCESORIOS", "BRIDAS", "JUNTAS", "ESPARRAGOS", "VALVULAS"]) {
+    const filas = consolidado.filter((r) => r.categoria === cat);
+    const porMedida = new Map();
+    for (const f of filas) {
+      const key = f.size || "—";
+      porMedida.set(key, (porMedida.get(key) || 0) + (f.cantidad || 0));
+    }
+    const unidad = cat === "CAÑERIAS" ? "m" : "Un.";
+    const lineas = [...porMedida.entries()]
+      .map(([size, cantidad]) => ({ size, cantidad: Math.round(cantidad * 100) / 100, unidad }))
+      .sort((a, b) => a.size.localeCompare(b.size));
+    const total = Math.round(lineas.reduce((s, l) => s + l.cantidad, 0) * 100) / 100;
+    porCategoria[cat] = { lineas, total, unidad };
+  }
+  return porCategoria;
+}
+
+// ---------- 5. Comparación contra revisión anterior ----------
 export function withDiff(actual, anterior) {
   const prevByKey = new Map();
   for (const r of anterior) {
