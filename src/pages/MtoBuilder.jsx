@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import {
   Upload, Trash2, Download, Plus, RefreshCw, AlertTriangle, Languages, LayoutGrid, Ruler, X, Filter, ClipboardList,
 } from "lucide-react";
-import { parseCrudoRow, consolidate, withDiff, summarize } from "../lib/mtoEngine";
+import { buildHeaderMap, parseCrudoRow, consolidate, withDiff, summarize } from "../lib/mtoEngine";
 
 // Aviso propio de esta página (no depende de la forma exacta del Toast
 // compartido, que no estaba disponible para verificar al construir esto).
@@ -44,12 +44,15 @@ function readWorkbookRows(file) {
         const sheetName = wb.SheetNames.find((n) => /bom|mto/i.test(n)) || wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        // saltar encabezado: primer fila con texto tipo MARK/SIZE/DESCRIPTION
+        // encontrar la fila de encabezado real (el crudo de CADWorx no siempre
+        // tiene las mismas columnas ni en el mismo orden — se identifican por
+        // nombre, nunca por posición fija)
         const startIdx = json.findIndex((r) =>
           r.some((c) => /mark|description|codigo_sap/i.test(String(c)))
         );
-        const dataRows = startIdx >= 0 ? json.slice(startIdx + 1) : json;
-        resolve(dataRows.filter((r) => r.some((c) => String(c).trim() !== "")));
+        const header = startIdx >= 0 ? json[startIdx] : json[0];
+        const dataRows = startIdx >= 0 ? json.slice(startIdx + 1) : json.slice(1);
+        resolve({ header, rows: dataRows.filter((r) => r.some((c) => String(c).trim() !== "")) });
       } catch (err) {
         reject(err);
       }
@@ -103,9 +106,28 @@ export default function MtoBuilder() {
   async function handleFiles(fileList, setter) {
     const arr = Array.from(fileList);
     const parsed = await Promise.all(
-      arr.map(async (file) => ({ name: file.name, area: "", rows: await readWorkbookRows(file) }))
+      arr.map(async (file) => {
+        const { header, rows } = await readWorkbookRows(file);
+        return { name: file.name, area: "", header, rows };
+      })
     );
     setter((prev) => [...prev, ...parsed]);
+  }
+
+  // Convierte las filas crudas de un set de archivos a filas parseadas,
+  // leyendo cada una por el encabezado real de SU propio archivo (no todos
+  // los crudos traen las mismas columnas) y descartando filas de pie de
+  // página / totales que no tienen descripción (no son componentes).
+  function parseFileSet(fileSet) {
+    const out = [];
+    for (const f of fileSet) {
+      const headerMap = buildHeaderMap(f.header);
+      for (const r of f.rows) {
+        const parsed = parseCrudoRow(headerMap, r, f.area || null);
+        if (parsed.description) out.push(parsed);
+      }
+    }
+    return out;
   }
 
   function generar() {
@@ -113,17 +135,11 @@ export default function MtoBuilder() {
       showToast("Subí al menos un archivo crudo de CADWorx.", "error");
       return;
     }
-    const allRows = [];
-    for (const f of files) {
-      for (const r of f.rows) allRows.push(parseCrudoRow(r, f.area || null));
-    }
+    const allRows = parseFileSet(files);
     let consolidado = consolidate(allRows, { roundPipeTo12: roundPipe, byArea });
 
     if (compareRev && prevFiles.length > 0) {
-      const prevRows = [];
-      for (const f of prevFiles) {
-        for (const r of f.rows) prevRows.push(parseCrudoRow(r, f.area || null));
-      }
+      const prevRows = parseFileSet(prevFiles);
       const prevConsolidado = consolidate(prevRows, { roundPipeTo12: roundPipe, byArea });
       consolidado = withDiff(consolidado, prevConsolidado);
     }
