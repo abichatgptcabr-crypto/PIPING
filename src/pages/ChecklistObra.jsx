@@ -1,10 +1,167 @@
 import React, { useState, useEffect, useMemo } from "react";
+import ExcelJS from "exceljs";
 import {
   ClipboardList, PackageCheck, Flame, Wrench, Gauge, Droplets, PaintBucket,
-  Thermometer, ClipboardCheck, ShieldCheck, ChevronDown, ChevronUp, RotateCcw,
+  Thermometer, ClipboardCheck, ShieldCheck, ChevronDown, ChevronUp, RotateCcw, Download, Loader2,
 } from "lucide-react";
 
 const STORAGE_KEY = "hytech-tools-checklist-obra";
+
+// Paleta Hytech, la misma que usa el MTO — para que el reporte se vea
+// consistente con el resto de los documentos que salen de la app.
+const NAVY = "FF113044";
+const BORDER = "FFB9C4CC";
+const GREEN_BG = "FFDCFCE7";
+const GREEN_TXT = "FF15803D";
+const AMBER_BG = "FFFEF3C7";
+const AMBER_TXT = "FF92400E";
+const RED_BG = "FFFEE2E2";
+const RED_TXT = "FFB91C1C";
+const THIN = { style: "thin", color: { argb: BORDER } };
+const BORDER_ALL = { top: THIN, left: THIN, bottom: THIN, right: THIN };
+
+function styleHeaderCells(row, colStart, colEnd) {
+  for (let c = colStart; c <= colEnd; c++) {
+    const cell = row.getCell(c);
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+    cell.border = BORDER_ALL;
+  }
+  row.height = 20;
+}
+
+function pctColors(pct) {
+  if (pct === 100) return { bg: GREEN_BG, txt: GREEN_TXT };
+  if (pct >= 50) return { bg: AMBER_BG, txt: AMBER_TXT };
+  return { bg: RED_BG, txt: RED_TXT };
+}
+
+// Arma el reporte descargable: carátula con el resumen por categoría (para
+// entregar de un vistazo) + una hoja de detalle con cada punto del checklist
+// y su estado, coloreado en verde/rojo según esté tildado o no.
+async function generarReporteExcel({ obra, proyecto, checklistData, checked }) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Hytech Tools";
+  wb.created = new Date();
+
+  // ---- Carátula ----
+  const car = wb.addWorksheet("Carátula");
+  car.columns = [{ width: 4 }, { width: 32 }, { width: 16 }, { width: 12 }, { width: 14 }];
+
+  car.mergeCells("B2:E2");
+  car.getCell("B2").value = "CHECKLIST DE OBRA — PIPING";
+  car.getCell("B2").font = { size: 18, bold: true, color: { argb: NAVY } };
+  car.mergeCells("B3:E3");
+  car.getCell("B3").value = "Control de avance en obra — mirada Owner · Hytech Tools";
+  car.getCell("B3").font = { size: 11, italic: true, color: { argb: "FF64748B" } };
+
+  const totalItems = checklistData.reduce((s, sec) => s + sec.items.length, 0);
+  const totalDone = checklistData.reduce(
+    (s, sec) => s + sec.items.filter((_, i) => checked[`${sec.id}-${i}`]).length,
+    0
+  );
+  const progressPct = totalItems ? Math.round((totalDone / totalItems) * 100) : 0;
+
+  const info = [
+    ["Obra asignada", obra || "—"],
+    ["N° de proyecto", proyecto || "—"],
+    ["Fecha del reporte", new Date().toLocaleDateString("es-AR")],
+    ["Avance general", `${progressPct}%  (${totalDone} de ${totalItems} puntos)`],
+  ];
+  let r = 5;
+  for (const [label, value] of info) {
+    car.getCell(`B${r}`).value = label;
+    car.getCell(`B${r}`).font = { bold: true, color: { argb: "FF475569" } };
+    car.mergeCells(`C${r}:E${r}`);
+    car.getCell(`C${r}`).value = value;
+    car.getCell(`C${r}`).font = {
+      bold: true,
+      size: label === "Avance general" ? 14 : 11,
+      color: { argb: label === "Avance general" ? pctColors(progressPct).txt : "FF113044" },
+    };
+    r += 1;
+  }
+
+  r += 1;
+  car.getCell(`B${r}`).value = "Avance por categoría";
+  car.getCell(`B${r}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  r += 1;
+  const headerRow = car.getRow(r);
+  headerRow.getCell(2).value = "Categoría";
+  headerRow.getCell(3).value = "Completados";
+  headerRow.getCell(4).value = "Total";
+  headerRow.getCell(5).value = "% Avance";
+  styleHeaderCells(headerRow, 2, 5);
+  r += 1;
+
+  for (const sec of checklistData) {
+    const done = sec.items.filter((_, i) => checked[`${sec.id}-${i}`]).length;
+    const pct = Math.round((done / sec.items.length) * 100);
+    const { bg, txt } = pctColors(pct);
+    const row = car.getRow(r);
+    row.getCell(2).value = sec.title;
+    row.getCell(3).value = done;
+    row.getCell(4).value = sec.items.length;
+    row.getCell(5).value = `${pct}%`;
+    for (let c = 2; c <= 5; c++) {
+      const cell = row.getCell(c);
+      cell.border = BORDER_ALL;
+      cell.alignment = { vertical: "middle", horizontal: c === 2 ? "left" : "center" };
+      if (c === 5) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+        cell.font = { bold: true, color: { argb: txt } };
+      }
+    }
+    r += 1;
+  }
+
+  // ---- Detalle ----
+  const det = wb.addWorksheet("Detalle");
+  det.columns = [{ width: 26 }, { width: 58 }, { width: 16 }];
+  const dHeader = det.getRow(1);
+  dHeader.getCell(1).value = "Categoría";
+  dHeader.getCell(2).value = "Ítem";
+  dHeader.getCell(3).value = "Estado";
+  styleHeaderCells(dHeader, 1, 3);
+  det.views = [{ state: "frozen", ySplit: 1 }];
+  det.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 3 } };
+
+  let rr = 2;
+  for (const sec of checklistData) {
+    for (const [i, item] of sec.items.entries()) {
+      const done = !!checked[`${sec.id}-${i}`];
+      const row = det.getRow(rr);
+      row.getCell(1).value = sec.title;
+      row.getCell(2).value = item;
+      row.getCell(3).value = done ? "Completado" : "Pendiente";
+      const bg = done ? GREEN_BG : "FFFFFFFF";
+      const txt = done ? GREEN_TXT : AMBER_TXT;
+      for (let c = 1; c <= 3; c++) {
+        const cell = row.getCell(c);
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+        cell.border = BORDER_ALL;
+        cell.alignment = { vertical: "middle", wrapText: c === 2 };
+      }
+      row.getCell(3).font = { bold: true, color: { argb: txt } };
+      rr += 1;
+    }
+  }
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const slug = (proyecto || obra || "obra").trim().replace(/[^a-zA-Z0-9]+/g, "_").slice(0, 40) || "obra";
+  a.href = url;
+  a.download = `Checklist_obra_${slug}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 // Mismo contenido del checklist de obra (piping, mirada Owner) que ya armamos
 // como doc — acá vive como data para poder tildar y calcular % de avance.
@@ -167,6 +324,8 @@ export default function ChecklistObra() {
   const [checked, setChecked] = useState({});
   const [openSection, setOpenSection] = useState(CHECKLIST_DATA[0].id);
   const [loaded, setLoaded] = useState(false);
+  const [descargando, setDescargando] = useState(false);
+  const [errorDescarga, setErrorDescarga] = useState("");
 
   // Carga lo guardado en este dispositivo (celu/PC) — cada uno guarda su
   // propio avance localmente, no hay backend compartido para esto todavía.
@@ -192,6 +351,18 @@ export default function ChecklistObra() {
   const resetAll = () => {
     if (!window.confirm("¿Reiniciar el checklist completo? Se pierden todos los tildes (obra y N° de proyecto se mantienen).")) return;
     setChecked({});
+  };
+
+  const descargarReporte = async () => {
+    setErrorDescarga("");
+    setDescargando(true);
+    try {
+      await generarReporteExcel({ obra, proyecto, checklistData: CHECKLIST_DATA, checked });
+    } catch (e) {
+      setErrorDescarga("No se pudo generar el archivo: " + (e.message || e));
+    } finally {
+      setDescargando(false);
+    }
   };
 
   return (
@@ -230,12 +401,21 @@ export default function ChecklistObra() {
         <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
           <div className="h-full bg-[#00589E] transition-all duration-300" style={{ width: `${progressPct}%` }} />
         </div>
-        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 mb-3">
           <span>{totalChecked} de {totalItems} puntos verificados</span>
           <button onClick={resetAll} className="flex items-center gap-1 hover:text-red-500">
             <RotateCcw size={11} /> Reiniciar
           </button>
         </div>
+        <button
+          onClick={descargarReporte}
+          disabled={descargando}
+          className="w-full flex items-center justify-center gap-2 text-[13px] font-medium px-3 py-2.5 rounded-md bg-[#00589E] text-white hover:bg-[#00406E] disabled:opacity-60"
+        >
+          {descargando ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+          {descargando ? "Generando reporte…" : "Descargar reporte (Excel)"}
+        </button>
+        {errorDescarga && <div className="mt-2 text-[12px] text-red-600">{errorDescarga}</div>}
       </div>
 
       {/* Botonera de secciones — cada una con ícono, % propio, y se despliega
