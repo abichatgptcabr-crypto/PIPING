@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  Home, Settings, FileStack, Droplets, Search, ChevronRight, Menu, X, HelpCircle, FolderCog, Calculator,
+  Home, Settings, FileStack, Droplets, Search, ChevronRight, Menu, X, HelpCircle, FolderCog, Calculator, ClipboardCheck,
 } from "lucide-react";
 
 const PAGES = [
@@ -9,6 +9,7 @@ const PAGES = [
   { id: "spec-builder", label: "Armar especificación", icon: FileStack },
   { id: "service-catalog", label: "Catálogo de servicios", icon: Droplets },
   { id: "mto-builder", label: "Generar MTO", icon: Calculator },
+  { id: "checklist-obra", label: "Checklist de obra", icon: ClipboardCheck },
   { id: "cad-files", label: "Central de archivos CAD", icon: FolderCog },
   { id: "help", label: "Ayuda", icon: HelpCircle },
 ];
@@ -29,6 +30,7 @@ const FEATURES = [
   { q: "excel exportar descargar", title: "Descargar Excel", desc: "Botón \"Descargar Excel\" en el Borrador de Armar especificación.", page: "spec-builder" },
   { q: "codigo servicio catalogo", title: "Código de un servicio", desc: "Cada servicio tiene un código estable, visible en el Catálogo de servicios.", page: "service-catalog" },
   { q: "mto bom consolidar bulk excel armado material takeoff", title: "Generar MTO", desc: "Subí el crudo exportado de CADWorx y armá el MTO consolidado por categoría, con traducción a la nomenclatura de Hytech.", page: "mto-builder" },
+  { q: "checklist obra avance porcentaje owner inspeccion", title: "Checklist de obra", desc: "Obra asignada, N° de proyecto y el checklist de piping por etapa, con % de avance según lo que vas tildando.", page: "checklist-obra" },
   { q: "lisp comando archivo subir compartir", title: "Subir un comando o archivo CAD", desc: "Central de archivos CAD — subí el archivo con nombre y descripción para que el equipo lo encuentre.", page: "cad-files" },
 ];
 
