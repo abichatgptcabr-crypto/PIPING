@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layers, FileStack, Droplets, Building2, ChevronLeft, Settings, Calculator, ChevronRight } from "lucide-react";
+import { Layers, FileStack, Droplets, Building2, ChevronLeft, Settings, Calculator, ClipboardCheck, ChevronRight } from "lucide-react";
 import { fetchStats } from "../lib/api";
 
 const TAGLINES = [
@@ -15,6 +15,7 @@ const TOOLS = [
   { id: "spec-builder", title: "Armar especificación", desc: "Elegí clases de cualquier proyecto y armá el documento para el cliente.", icon: FileStack, accent: "#00589E" },
   { id: "service-catalog", title: "Catálogo de servicios", desc: "Todos los servicios, agrupados y codificados para los documentos.", icon: Droplets, accent: "#00406E" },
   { id: "mto-builder", title: "Generar MTO", desc: "Subí el crudo exportado de CADWorx y armá el MTO consolidado, clasificado y traducido a la nomenclatura de Hytech.", icon: Calculator, accent: "#4DA8DC" },
+  { id: "checklist-obra", title: "Checklist de obra", desc: "Obra asignada, N° de proyecto, y el checklist de piping por etapa con % de avance en vivo.", icon: ClipboardCheck, accent: "#00589E" },
 ];
 
 function CountUp({ target }) {
