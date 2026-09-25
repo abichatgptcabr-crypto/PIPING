@@ -7,6 +7,7 @@ import ServiceCatalog from "./pages/ServiceCatalog";
 import CadFiles from "./pages/CadFiles";
 import MtoBuilder from "./pages/MtoBuilder";
 import ChecklistObra from "./pages/ChecklistObra";
+import CalculadorasPiping from "./pages/CalculadorasPiping";
 import Help from "./pages/Help";
 import ViewSpec from "./pages/ViewSpec";
 import PasswordGate from "./components/PasswordGate";
@@ -22,6 +23,7 @@ const PAGE_TITLES = {
   "cad-files": "Central de archivos CAD",
   "mto-builder": "Generar MTO",
   "checklist-obra": "Checklist de obra",
+  "calculadoras": "Calculadoras de piping",
   "help": "Ayuda",
 };
 
@@ -97,6 +99,7 @@ export default function App() {
             {page === "cad-files" && <CadFiles />}
             {page === "mto-builder" && <MtoBuilder />}
             {page === "checklist-obra" && <ChecklistObra />}
+            {page === "calculadoras" && <CalculadorasPiping />}
             {page === "help" && <Help />}
           </>
         )}
