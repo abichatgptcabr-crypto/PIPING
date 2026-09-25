@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
 import { Lock, Loader2 } from "lucide-react";
 import { logAccess } from "../lib/api";
 import { supabase } from "../lib/supabaseClient";
@@ -20,6 +20,17 @@ export default function PasswordGate({ children }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Registra la entrada en Supabase cada vez que hay acceso válido — tanto
+  // si viene de tipear la contraseña ahora como si ya estaba guardado en
+  // localStorage de una visita anterior. Antes esto vivía solo dentro de
+  // submit(), así que a quien ya tenía el acceso guardado nunca se le
+  // volvía a registrar la visita (submit() no se ejecuta de nuevo).
+  useEffect(() => {
+    if (access?.name) {
+      logAccess(access.name).catch(() => {}); // registro en segundo plano, no bloquea el ingreso
+    }
+  }, [access]);
+
  const submit = async (e) => {
     e.preventDefault();
     setError("");
@@ -32,8 +43,7 @@ export default function PasswordGate({ children }) {
       if (!data?.ok) { setError("Contraseña incorrecta."); return; }
       const entry = { name: name.trim() };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entry));
-      setAccess(entry);
-      logAccess(entry.name).catch(() => {}); // registro en segundo plano, no bloquea el ingreso
+      setAccess(entry); // dispara el useEffect de arriba, que hace el logAccess
     } catch (err) {
       setError("No se pudo verificar la contraseña: " + err.message);
     } finally {
