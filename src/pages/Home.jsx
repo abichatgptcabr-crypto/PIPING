@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layers, FileStack, Droplets, Building2, ChevronLeft, Settings, HardDrive, ChevronRight } from "lucide-react";
+import { Layers, FileStack, Droplets, Building2, ChevronLeft, Settings, Calculator, ChevronRight } from "lucide-react";
 import { fetchStats } from "../lib/api";
 
 const TAGLINES = [
@@ -14,7 +14,7 @@ const TOOLS = [
   { id: "generador", title: "Generador de piping class", desc: "Registro completo de clases, edición, comparador y control de revisión.", icon: Settings, accent: "#113044" },
   { id: "spec-builder", title: "Armar especificación", desc: "Elegí clases de cualquier proyecto y armá el documento para el cliente.", icon: FileStack, accent: "#00589E" },
   { id: "service-catalog", title: "Catálogo de servicios", desc: "Todos los servicios, agrupados y codificados para los documentos.", icon: Droplets, accent: "#00406E" },
-  { id: "cadworx-export", title: "Generar SPEC CADWorx", desc: "Convertí una especificación guardada en un borrador de catálogo para CADWorx.", icon: HardDrive, accent: "#4DA8DC" },
+  { id: "mto-builder", title: "Generar MTO", desc: "Subí el crudo exportado de CADWorx y armá el MTO consolidado, clasificado y traducido a la nomenclatura de Hytech.", icon: Calculator, accent: "#4DA8DC" },
 ];
 
 function CountUp({ target }) {
