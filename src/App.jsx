@@ -51,23 +51,29 @@ export default function App() {
       <div className="min-h-screen flex flex-col">
       <Sidebar currentPage={page} onNavigate={setPage} />
       <header className="print:hidden bg-[#00589E] sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+        {/* En celus angostos el renglón entero (logo + "Herramientas internas" +
+            Inicio + título de página) no entra y lo que se corta es justo el
+            botón de volver — por eso antes no aparecía la flecha en el celu.
+            Acá "Herramientas internas" y el título de la página actual se
+            ocultan debajo de sm; el botón "‹ Inicio" tiene shrink-0 así nunca
+            es lo que se recorta. */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-2 sm:gap-3 overflow-hidden">
           <button onClick={() => setPage("home")} className="flex items-center gap-2 shrink-0">
             <img src={hytechLogoWhite} alt="Hytech" className="h-6 w-auto" />
           </button>
-          <span className="text-white/40 text-[13px] font-display uppercase tracking-wider">/</span>
-          <span className="text-white/90 text-[12px] font-display uppercase tracking-[0.12em]">Herramientas internas</span>
+          <span className="hidden sm:inline text-white/40 text-[13px] font-display uppercase tracking-wider shrink-0">/</span>
+          <span className="hidden sm:inline text-white/90 text-[12px] font-display uppercase tracking-[0.12em] shrink-0">Herramientas internas</span>
           {page !== "home" && (
             <>
-              <span className="text-white/40">/</span>
+              <span className="hidden sm:inline text-white/40 shrink-0">/</span>
               <button
                 onClick={() => setPage("home")}
-                className="flex items-center gap-1.5 text-[13px] text-white/70 hover:text-white"
+                className="flex items-center gap-1.5 text-[13px] text-white/90 hover:text-white shrink-0"
               >
                 <ArrowLeft size={14} /> Inicio
               </button>
-              <span className="text-white/40">/</span>
-              <span className="text-[13px] font-medium text-white">{PAGE_TITLES[page]}</span>
+              <span className="hidden sm:inline text-white/40 shrink-0">/</span>
+              <span className="hidden sm:inline text-[13px] font-medium text-white truncate min-w-0">{PAGE_TITLES[page]}</span>
             </>
           )}
         </div>
