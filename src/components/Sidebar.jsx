@@ -30,6 +30,7 @@ const FEATURES = [
   { q: "mto bom consolidar bulk excel armado material takeoff", title: "Generar MTO", desc: "Subí el crudo exportado de CADWorx y armá el MTO consolidado por categoría, con traducción a la nomenclatura de Hytech.", page: "mto-builder" },
   { q: "checklist obra avance porcentaje owner inspeccion", title: "Checklist de obra", desc: "Obra asignada, N° de proyecto y el checklist de piping por etapa, con % de avance según lo que vas tildando.", page: "checklist-obra" },
   { q: "lisp comando archivo subir compartir", title: "Subir un comando o archivo CAD", desc: "Central de archivos CAD — subí el archivo con nombre y descripción para que el equipo lo encuentre.", page: "cad-files" },
+  { q: "calculadora peso volumen dilatacion presion hidraulica sigma cañeria", title: "Calculadoras de piping", desc: "Peso y volumen de cañería, presión de prueba hidráulica y dilatación térmica de un tramo.", page: "calculadoras" },
 ];
 
 export default function Sidebar({ currentPage, onNavigate }) {
