@@ -64,14 +64,6 @@ export default function Home({ onOpen }) {
           que no quede un bloque plano vacío, y las estadísticas metidas
           adentro (no como una fila suelta más abajo) */}
       <div className="relative bg-[#113044] overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-            backgroundSize: "42px 42px",
-          }}
-        />
         <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#00589E] opacity-20 blur-3xl" />
         <div className="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-[#4DA8DC] opacity-10 blur-3xl" />
 
