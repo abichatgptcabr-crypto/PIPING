@@ -1,15 +1,13 @@
 import React, { useState, useMemo } from "react";
 import {
-  Home, Settings, FileStack, Droplets, Search, ChevronRight, Menu, X, HelpCircle, FolderCog, Calculator, ClipboardCheck,
+  Home, Search, ChevronRight, Menu, X, HelpCircle, FolderCog,
 } from "lucide-react";
 
+// Solo lo que NO tiene tarjeta propia en la pantalla de Inicio — las 5
+// herramientas principales (Generador, Armar especificación, Catálogo,
+// Generar MTO, Checklist de obra) ya están ahí, no se duplican acá.
 const PAGES = [
   { id: "home", label: "Inicio", icon: Home },
-  { id: "generador", label: "Generador de piping class", icon: Settings },
-  { id: "spec-builder", label: "Armar especificación", icon: FileStack },
-  { id: "service-catalog", label: "Catálogo de servicios", icon: Droplets },
-  { id: "mto-builder", label: "Generar MTO", icon: Calculator },
-  { id: "checklist-obra", label: "Checklist de obra", icon: ClipboardCheck },
   { id: "cad-files", label: "Central de archivos CAD", icon: FolderCog },
   { id: "help", label: "Ayuda", icon: HelpCircle },
 ];
