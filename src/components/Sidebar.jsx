@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  Home, Settings, FileStack, Droplets, HardDrive, Search, ChevronRight, Menu, X, HelpCircle, FolderCog, Calculator,
+  Home, Settings, FileStack, Droplets, Search, ChevronRight, Menu, X, HelpCircle, FolderCog, Calculator,
 } from "lucide-react";
 
 const PAGES = [
@@ -8,7 +8,6 @@ const PAGES = [
   { id: "generador", label: "Generador de piping class", icon: Settings },
   { id: "spec-builder", label: "Armar especificación", icon: FileStack },
   { id: "service-catalog", label: "Catálogo de servicios", icon: Droplets },
-  { id: "cadworx-export", label: "Generar SPEC CADWorx", icon: HardDrive },
   { id: "mto-builder", label: "Generar MTO", icon: Calculator },
   { id: "cad-files", label: "Central de archivos CAD", icon: FolderCog },
   { id: "help", label: "Ayuda", icon: HelpCircle },
@@ -29,7 +28,6 @@ const FEATURES = [
   { q: "agrupar servicio proyecto", title: "Agrupar por servicio o por proyecto", desc: "Botones arriba del buscador de clases, en Armar especificación.", page: "spec-builder" },
   { q: "excel exportar descargar", title: "Descargar Excel", desc: "Botón \"Descargar Excel\" en el Borrador de Armar especificación.", page: "spec-builder" },
   { q: "codigo servicio catalogo", title: "Código de un servicio", desc: "Cada servicio tiene un código estable, visible en el Catálogo de servicios.", page: "service-catalog" },
-  { q: "cadworx spec 3d", title: "Generar SPEC para CADWorx", desc: "Elegí una spec guardada y generá un borrador de catálogo con componentes confirmados.", page: "cadworx-export" },
   { q: "mto bom consolidar bulk excel armado material takeoff", title: "Generar MTO", desc: "Subí el crudo exportado de CADWorx y armá el MTO consolidado por categoría, con traducción a la nomenclatura de Hytech.", page: "mto-builder" },
   { q: "lisp comando archivo subir compartir", title: "Subir un comando o archivo CAD", desc: "Central de archivos CAD — subí el archivo con nombre y descripción para que el equipo lo encuentre.", page: "cad-files" },
 ];
