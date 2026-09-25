@@ -4,7 +4,6 @@ import Home from "./pages/Home";
 import Generador from "./pages/Generador";
 import SpecBuilder from "./pages/SpecBuilder";
 import ServiceCatalog from "./pages/ServiceCatalog";
-import CadworxExport from "./pages/CadworxExport";
 import CadFiles from "./pages/CadFiles";
 import MtoBuilder from "./pages/MtoBuilder";
 import Help from "./pages/Help";
@@ -19,7 +18,6 @@ const PAGE_TITLES = {
   generador: "Generador de piping class",
   "spec-builder": "Armar especificación",
   "service-catalog": "Catálogo de servicios",
-  "cadworx-export": "Generar SPEC CADWorx",
   "cad-files": "Central de archivos CAD",
   "mto-builder": "Generar MTO",
   "help": "Ayuda",
@@ -88,7 +86,6 @@ export default function App() {
             {page === "generador" && <Generador />}
             {page === "spec-builder" && <SpecBuilder />}
             {page === "service-catalog" && <ServiceCatalog />}
-            {page === "cadworx-export" && <CadworxExport />}
             {page === "cad-files" && <CadFiles />}
             {page === "mto-builder" && <MtoBuilder />}
             {page === "help" && <Help />}
