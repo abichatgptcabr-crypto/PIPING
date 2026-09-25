@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 import { Lock, Loader2 } from "lucide-react";
-import { logAccess } from "../lib/api";
+import { logAccess, updateAccessDuration } from "../lib/api";
 import { supabase } from "../lib/supabaseClient";
 import hytechLogo from "../assets/hytech-logo.png";
 
@@ -25,10 +25,44 @@ export default function PasswordGate({ children }) {
   // localStorage de una visita anterior. Antes esto vivía solo dentro de
   // submit(), así que a quien ya tenía el acceso guardado nunca se le
   // volvía a registrar la visita (submit() no se ejecuta de nuevo).
+  //
+  // Además, mide cuánto tiempo queda esa visita con la página abierta y lo
+  // va guardando en la misma fila (columna duracion_segundos): un
+  // "heartbeat" cada 30s mientras sigue abierta, más un intento al cambiar
+  // de pestaña o cerrarla. No es exacto al segundo — si el navegador se
+  // cierra de golpe, como mucho se pierden esos últimos ~30s — pero da una
+  // idea real de cuánto se usa la herramienta.
   useEffect(() => {
-    if (access?.name) {
-      logAccess(access.name).catch(() => {}); // registro en segundo plano, no bloquea el ingreso
-    }
+    if (!access?.name) return;
+
+    let accessLogId = null;
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    logAccess(access.name)
+      .then((row) => { if (!cancelled) accessLogId = row?.id ?? null; })
+      .catch(() => {}); // registro en segundo plano, no bloquea el ingreso
+
+    const sendDuration = () => {
+      if (!accessLogId) return;
+      const seconds = (Date.now() - startedAt) / 1000;
+      updateAccessDuration(accessLogId, seconds).catch(() => {});
+    };
+
+    const heartbeat = setInterval(sendDuration, 30000);
+    const handleVisibility = () => { if (document.visibilityState === "hidden") sendDuration(); };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("beforeunload", sendDuration);
+    window.addEventListener("pagehide", sendDuration);
+
+    return () => {
+      cancelled = true;
+      clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("beforeunload", sendDuration);
+      window.removeEventListener("pagehide", sendDuration);
+      sendDuration();
+    };
   }, [access]);
 
  const submit = async (e) => {
