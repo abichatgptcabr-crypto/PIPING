@@ -16,6 +16,8 @@ export async function getCurrentUserEmail() {
 // Registro de acceso: nombre autoreportado + IP pública (útil para
 // confirmar que vino de la red de oficina) + navegador. No es una
 // identidad verificada, es un registro informativo.
+// Devuelve la fila insertada (con su id) para poder después actualizarle
+// la duración de la visita con updateAccessDuration().
 export async function logAccess(name) {
   let ip = null;
   try {
@@ -25,10 +27,28 @@ export async function logAccess(name) {
   } catch {
     // sin conexión al servicio de IP, seguimos igual sin bloquear el acceso
   }
-  const { error } = await supabase.from("access_log").insert({
-    name, ip, user_agent: navigator.userAgent,
-  });
+  const { data, error } = await supabase
+    .from("access_log")
+    .insert({ name, ip, user_agent: navigator.userAgent })
+    .select()
+    .single();
   if (error) throw error;
+  return data;
+}
+
+// Actualiza cuánto tiempo lleva esa visita (en segundos) sobre la fila que
+// devolvió logAccess. Se llama cada tanto mientras la persona sigue en la
+// página (heartbeat) y al salir — no es exacto al segundo (si el navegador
+// se cierra de golpe se pierde como mucho el intervalo del heartbeat), pero
+// da una idea real de cuánto se usa la herramienta. Nunca bloquea ni rompe
+// nada si falla: es un dato informativo, no algo crítico.
+export async function updateAccessDuration(accessLogId, seconds) {
+  if (!accessLogId) return;
+  const { error } = await supabase
+    .from("access_log")
+    .update({ duracion_segundos: Math.round(seconds) })
+    .eq("id", accessLogId);
+  if (error) console.error("No se pudo actualizar la duración de acceso:", error.message);
 }
 
 /* ═══════════════════════════ Lectura ═══════════════════════════════════ */
